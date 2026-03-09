@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎾 Junior Tennis Tracker · TCSP</title>
+
+<!-- Home screen / PWA meta -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tennis Tracker">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a1628">
+<meta name="description" content="Junior tennis skill progression tracker — TCSP Red, Orange & Green Ball criteria">
+
+<!-- Open Graph (looks good when shared via iMessage / WhatsApp to coaches) -->
+<meta property="og:title" content="🎾 Junior Tennis Tracker">
+<meta property="og:description" content="Track your player's progress through TCSP Red Ball 1.0–3.0, Orange Ball 1.0–3.0, and Green/Yellow Ball criteria.">
+<meta property="og:type" content="website">
+
+<!-- Apple touch icon (emoji rendered as SVG inline) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230a1628'/><text y='.9em' font-size='80' x='10'>🎾</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>🎾</text></svg>">
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0a1628;color:#f0ede6;font-family:'Palatino Linotype','Book Antiqua',Palatino,Georgia,serif;}
+  input,textarea,button,select{font-family:inherit;}
+  ::-webkit-scrollbar{width:4px;height:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px;}
+  @keyframes starPop{0%{transform:scale(0) rotate(-20deg);opacity:0}60%{transform:scale(1.5) rotate(10deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:0}}
+  @keyframes slideUp{from{transform:translateX(-50%) translateY(30px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useRef}=React;
+
+/* ── DATA — Progression criteria from Tennis Center Sand Point (tenniscentersandpoint.com) ── */
+const STAGES=[
+  {id:"red1",label:"Red Ball 1.0",short:"Red 1",emoji:"🔴",ageRange:"Ages 5–7",courtSize:"18′ × 36′ court",color:"#E8382B",accent:"#C0271C",
+   description:"TCSP: Serve from 36′ court, short 2–3 ball rally with a partner, and direct ball away from opponent.",
+   skills:[
+     {id:"r1a",text:"Serve from the 36′ court to the correct side consistently"},
+     {id:"r1b",text:"Serve from the 27′ court (overhead throw or bounce hit)"},
+     {id:"r1c",text:"Short 2–3 ball rally with a partner, with simple recovery between shots"},
+     {id:"r1d",text:"Direct the ball away from an opponent"},
+     {id:"r1e",text:"Keep score to 7 points"},
+     {id:"r1f",text:"Basic racket control — hand-eye coordination, correct grip"},
+     {id:"r1g",text:"Understand court lines and correct position to start the point"},
+     {id:"r1h",text:"Listens, cooperates, gives high effort, comes prepared"},
+   ]},
+  {id:"red2",label:"Red Ball 2.0",short:"Red 2",emoji:"🔴",ageRange:"Ages 5–7",courtSize:"18′ × 36′ court",color:"#C0271C",accent:"#9A1E15",
+   description:"TCSP: Intentionally apply Red 1 skills during games, move ball side to side, recognise open court spaces.",
+   skills:[
+     {id:"r2a",text:"Intentionally apply skills learned in Red 1 during games"},
+     {id:"r2b",text:"Ability to intentionally move the ball side to side"},
+     {id:"r2c",text:"Recognition of open court spaces during play"},
+     {id:"r2d",text:"Volley skills: motion and grip, move from ready step with proper form"},
+     {id:"r2e",text:"Serve and return: underhand and overhand into correct box, correct grip and position"},
+     {id:"r2f",text:"Rally skills: basic consistency sending and receiving"},
+     {id:"r2g",text:"Agility, balance, and coordination (athletic skills)"},
+     {id:"r2h",text:"Listens, cooperates, gives high effort — ready for Red 3.0 evaluation"},
+   ]},
+  {id:"red3",label:"Red Ball 3.0",short:"Red 3",emoji:"🔴",ageRange:"Ages 5–7",courtSize:"18′ × 36′ court",color:"#9A1E15",accent:"#7A1510",
+   description:"TCSP Red 3.0: Overhead serve consistently, rally with recovery, direct ball and make line calls. Instructor approval required — 2 classes/week.",
+   skills:[
+     {id:"r3a",text:"Basic groundstroke and serve technique, correct grips and footwork with balance"},
+     {id:"r3b",text:"Overhead serve to the correct side of the court consistently"},
+     {id:"r3c",text:"Short rally with a partner with recovery between shots"},
+     {id:"r3d",text:"Direct the ball away from the opponent"},
+     {id:"r3e",text:"Keep score correctly and make accurate line calls"},
+     {id:"r3f",text:"Physically and mentally prepared for situational play"},
+     {id:"r3g",text:"Instructor / Lead Pro approval required for placement"},
+     {id:"r3h",text:"Attends 2 classes per week (Tue & Thu commitment)"},
+   ]},
+  {id:"orange",label:"Orange Ball 1.0",short:"Orange 1",emoji:"🟠",ageRange:"Ages 8–10",courtSize:"60-ft court",color:"#F5820D",accent:"#C4670B",
+   description:"TCSP Orange 1.0: First time on 60′ court — build forehand, backhand, serve and volley fundamentals.",
+   skills:[
+     {id:"o1a",text:"Basic forehand with swing path and follow-through"},
+     {id:"o1b",text:"Basic backhand with some control"},
+     {id:"o1c",text:"Serve into the correct service box (underhand or overhand)"},
+     {id:"o1d",text:"Cooperative rally with a partner on the 60′ court"},
+     {id:"o1e",text:"Basic volley motion and grip inside the service box"},
+     {id:"o1f",text:"Understand parts of the court and basic scoring"},
+     {id:"o1g",text:"Drop-feed and hit ball into an intended area"},
+     {id:"o1h",text:"Make line calls and demonstrate sportsmanship"},
+   ]},
+  {id:"orange2",label:"Orange Ball 2.0",short:"Orange 2",emoji:"🟠",ageRange:"Ages 8–10",courtSize:"60-ft court",color:"#D46A08",accent:"#A85206",
+   description:"TCSP Orange 2.0: Improved game understanding — direct ball side to side, recognise open court, approach and volley pattern.",
+   skills:[
+     {id:"o2a",text:"Improved ability to direct the ball side to side"},
+     {id:"o2b",text:"Recognition and use of open court spaces during points"},
+     {id:"o2c",text:"Demonstrate an approach and volley pattern during points"},
+     {id:"o2d",text:"Racquet skills and movement mechanics on 60′ court"},
+     {id:"o2e",text:"Court awareness and ability to structure points intentionally"},
+     {id:"o2f",text:"Understand offense and defense in singles and doubles"},
+     {id:"o2g",text:"Consistent serve with placement into correct box"},
+     {id:"o2h",text:"Concept of placement — control over power"},
+   ]},
+  {id:"orange3",label:"Orange Ball 3.0",short:"Orange 3",emoji:"🟠",ageRange:"Ages 8–10",courtSize:"60-ft court",color:"#B85A06",accent:"#924605",
+   description:"TCSP Orange 3.0: Competitive match play, all-court tactics, TCSP Friday Night Match Play. Lead Pro approval required — 2 classes/week.",
+   skills:[
+     {id:"o3a",text:"Consistent groundstrokes with directional control on 60′ court"},
+     {id:"o3b",text:"All-court awareness — apply singles and doubles tactics"},
+     {id:"o3c",text:"Approach and volley pattern executed during live points"},
+     {id:"o3d",text:"Understand and apply concepts of offense and defense"},
+     {id:"o3e",text:"Playing in TCSP Friday Night Match Play events"},
+     {id:"o3f",text:"Progress tracked by coach session by session"},
+     {id:"o3g",text:"Lead Pro / Junior Tennis Director approval required for placement"},
+     {id:"o3h",text:"Attends 2 classes per week (Tue & Thu commitment)"},
+   ]},
+  {id:"green",label:"Green / Yellow Ball",short:"Green",emoji:"🟢",ageRange:"Ages 11+",courtSize:"78-ft full court",color:"#2D9C4A",accent:"#1E7035",
+   description:"TCSP Yellow Ball 1.0: Full 78′ court with green/yellow balls — rally with partner, complete groundstrokes with coach-fed ball, develop full serve motion.",
+   skills:[
+     {id:"g1",text:"Rally with a green ball with a partner on full 78′ court"},
+     {id:"g2",text:"Complete forehand and backhand groundstrokes with coach-fed ball"},
+     {id:"g3",text:"Developing a full service motion — toss, contact, full swing"},
+     {id:"g4",text:"Balance and coordination drills for full-court movement"},
+     {id:"g5",text:"Move to the ball and recover to ready position"},
+     {id:"g6",text:"Place groundstroke during feeding drills with full swing"},
+     {id:"g7",text:"Keep score and play full points on 78′ court"},
+   ]},
+];
+const PROGRAMS=[
+  {name:"Amy Yee Tennis Center",type:"Public / Seattle Parks",url:"https://www.seattle.gov/parks/find/centers/amy-yee-tennis-center",phone:"(206) 684-4764",address:"2000 Martin Luther King Jr Way S, Seattle",levels:"Red · Orange · Green",notes:"Seattle Parks flagship indoor tennis center. Junior programs, lessons, and leagues year-round.",color:"#E8382B"},
+  {name:"ACES Tennis",type:"Non-profit / Community",url:"https://www.acestennis.org",phone:"(206) 726-1386",address:"Multiple sites across Seattle",levels:"Red · Orange · Green",notes:"Free and low-cost programs for underserved youth. Excellent junior development pathway.",color:"#F5820D"},
+  {name:"Tennis Center Sand Point",type:"Private Club",url:"https://www.tenniscentersandpoint.com",phone:"(206) 522-5008",address:"7135 Sportsfield Drive NE, Seattle, WA 98115",levels:"Red · Orange · Green · Yellow",notes:"This app uses TCSP's official progression criteria (Red 1.0–3.0, Orange 1.0–3.0, Yellow 1.0+). Junior programs, USTA match play, Friday Night Match Play events, and summer camps.",color:"#2D9C4A"},
+  {name:"Eastside Tennis Center",type:"Private Club",url:"https://www.eastsidetenniscenter.com",phone:"(425) 603-8300",address:"14340 NE 21st St, Bellevue",levels:"Red · Orange · Green · Full",notes:"Large Eastside facility with comprehensive junior programs and USTA junior team tennis.",color:"#3B82F6"},
+];
+const PARENTING_TIPS=[
+  {icon:"🤐",title:"The Silent Car Ride Rule",color:"#E8382B",summary:"The 20-minute window after a match is the hardest — and most important.",body:"Resist the urge to debrief immediately. Children need time to process emotions. Aim for silence for at least 20 minutes. A simple \"I loved watching you play today\" is enough."},
+  {icon:"💬",title:"The One Sentence Rule",color:"#F5820D",summary:"If you must say something after a match, say exactly one thing.",body:"\"I love watching you compete\" tells your child your enjoyment isn't tied to their performance. Avoid \"You should have...\" — even said with love, it creates anxiety."},
+  {icon:"🎯",title:"Separate Your Goals from Theirs",color:"#2D9C4A",summary:"A parent's ambitions can easily become a child's burden.",body:"Ask yourself: who wants them to improve more right now — you or them? The fastest path to burnout is a parent more motivated than the child."},
+  {icon:"👏",title:"Praise Effort, Not Outcome",color:"#8B5CF6",summary:"How you praise shapes how your child handles adversity.",body:"\"You worked really hard on that backhand\" builds resilience. \"You're so talented\" creates fragility. Acknowledge feelings before analysis."},
+  {icon:"🧘",title:"Model How to Lose",color:"#0EA5E9",summary:"Your reaction to their losses teaches more than any coach can.",body:"Practice a warm, neutral face after a tough loss. Hug them. Ask \"Are you hungry?\" before \"What happened in the third set?\""},
+  {icon:"🚫",title:"Never Coach from the Sidelines",color:"#F59E0B",summary:"Sideline coaching — even well-intentioned — almost always backfires.",body:"When a parent mouths instructions, the child manages two relationships at once. Cheer all good shots and stay quiet otherwise."},
+  {icon:"🌱",title:"Let Them Quit — And Revisit",color:"#10B981",summary:"Forcing continuation often costs you the sport permanently.",body:"Ask open questions first. Often it's a specific frustration. Consider a break — many players who step away at 9 return at 12 with renewed motivation."},
+  {icon:"💛",title:"Your Relationship First, Tennis Second",color:"#EC4899",summary:"The sport should never cost you closeness with your child.",body:"In 20 years, your child will remember how they felt around you — not what ball stage they were on."},
+];
+const ACHIEVEMENTS=[
+  {id:"first_skill",icon:"⭐",label:"First Star",desc:"Mastered your very first skill!",color:"#F59E0B"},
+  {id:"red1_half",icon:"🌱",label:"Growing Fast",desc:"Halfway through Red Ball 1.0",color:"#E8382B"},
+  {id:"red1_done",icon:"🌟",label:"Red 1 Complete",desc:"Completed TCSP Red Ball 1.0!",color:"#E8382B"},
+  {id:"red2_done",icon:"💫",label:"Red 2 Complete",desc:"Completed TCSP Red Ball 2.0!",color:"#C0271C"},
+  {id:"red3_done",icon:"🔥",label:"Red Champion",desc:"Completed TCSP Red Ball 3.0!",color:"#9A1E15"},
+  {id:"orange_half",icon:"⚡",label:"Rising Player",desc:"Halfway through Orange Ball 1.0",color:"#F5820D"},
+  {id:"orange_done",icon:"🎯",label:"Orange 1 Complete",desc:"Completed Orange Ball 1.0!",color:"#F5820D"},
+  {id:"orange2_done",icon:"🏅",label:"Orange 2 Complete",desc:"Completed Orange Ball 2.0!",color:"#D46A08"},
+  {id:"orange3_done",icon:"🏆",label:"Orange Champion",desc:"Completed Orange Ball 3.0!",color:"#B85A06"},
+  {id:"green_half",icon:"🎾",label:"Match Ready",desc:"Halfway through Green/Yellow Ball",color:"#2D9C4A"},
+  {id:"green_done",icon:"🌈",label:"Full Journey",desc:"Completed the full TCSP progression!",color:"#2D9C4A"},
+  {id:"journal_5",icon:"📓",label:"Story Teller",desc:"Wrote 5 journal entries",color:"#8B5CF6"},
+  {id:"journal_10",icon:"📚",label:"Tennis Diary",desc:"Wrote 10 journal entries",color:"#7C3AED"},
+];
+const LEARN_MODULES=[{id:"grips",icon:"🤚",label:"Grips",color:"#E8382B"},{id:"shots",icon:"🎾",label:"Shots",color:"#F5820D"},{id:"court",icon:"🟩",label:"The Court",color:"#2D9C4A"},{id:"legends",icon:"⭐",label:"Legends",color:"#8B5CF6"},{id:"rules",icon:"📋",label:"Rules",color:"#0EA5E9"}];
+const AVATARS=["🎾","🏆","⭐","🔴","🟠","🟢","🦁","🐯","🦊","🐬","🦅","🌟","🔥","💎","🚀","🌈"];
+const CLUBS=["Amy Yee Tennis Center","ACES Tennis","Tennis Center Sand Point","Eastside Tennis Center","Other / Independent"];
+const STORAGE_KEY="jtt-v7";
+const TCSP_URL="https://tenniscentersandpoint.com/classes-programs/juniors/";
+
+/* ── HELPERS ── */
+function todayStr(){return new Date().toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});}
+function saveData(d){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}catch(e){}}
+function loadData(){try{const d=localStorage.getItem(STORAGE_KEY);return d?JSON.parse(d):null;}catch(e){return null;}}
+
+function ProgressRing({pct,color,size=56}){
+  const r=(size-8)/2,circ=2*Math.PI*r,dash=(pct/100)*circ;
+  return(
+    <svg width={size} height={size} style={{transform:"rotate(-90deg)",flexShrink:0}}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={6}/>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        style={{transition:"stroke-dasharray 0.6s ease"}}/>
+    </svg>
+  );
+}
+
+function Confetti({active,onDone}){
+  const ref=useRef();
+  useEffect(()=>{
+    if(!active)return;
+    const c=ref.current;if(!c)return;
+    const ctx=c.getContext("2d");c.width=window.innerWidth;c.height=window.innerHeight;
+    const cols=["#E8382B","#F5820D","#2D9C4A","#F59E0B","#8B5CF6","#0EA5E9","#EC4899"];
+    const p=Array.from({length:100},()=>({x:Math.random()*c.width,y:-10,vx:(Math.random()-.5)*7,vy:Math.random()*5+2,color:cols[Math.floor(Math.random()*cols.length)],r:Math.random()*6+3,rot:Math.random()*360,rv:(Math.random()-.5)*9}));
+    let fr=0,raf;
+    function draw(){ctx.clearRect(0,0,c.width,c.height);p.forEach(q=>{q.x+=q.vx;q.y+=q.vy;q.vy+=0.09;q.rot+=q.rv;ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.rot*Math.PI/180);ctx.fillStyle=q.color;ctx.globalAlpha=Math.max(0,1-fr/90);ctx.fillRect(-q.r,-q.r/2,q.r*2,q.r);ctx.restore();});fr++;if(fr<110)raf=requestAnimationFrame(draw);else{ctx.clearRect(0,0,c.width,c.height);onDone&&onDone();}}
+    draw();return()=>cancelAnimationFrame(raf);
+  },[active]);
+  if(!active)return null;
+  return <canvas ref={ref} style={{position:"fixed",inset:0,width:"100%",height:"100%",pointerEvents:"none",zIndex:999}}/>;
+}
+
+function Toast({achievement,onDone}){
+  useEffect(()=>{const t=setTimeout(onDone,3500);return()=>clearTimeout(t);},[]);
+  if(!achievement)return null;
+  return(
+    <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",zIndex:300,
+      background:`linear-gradient(135deg,${achievement.color}f0,${achievement.color}c0)`,
+      borderRadius:16,padding:"13px 20px",boxShadow:`0 8px 32px ${achievement.color}55`,
+      display:"flex",alignItems:"center",gap:12,minWidth:250,animation:"slideUp 0.4s ease"}}>
+      <span style={{fontSize:30}}>{achievement.icon}</span>
+      <div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,0.8)",textTransform:"uppercase",letterSpacing:1}}>Achievement Unlocked!</div>
+        <div style={{fontSize:15,fontWeight:"bold",color:"#fff"}}>{achievement.label}</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.85)"}}>{achievement.desc}</div>
+      </div>
+    </div>
+  );
+}
+
+function ParentingTip({tip}){
+  const[open,setOpen]=useState(false);
+  return(
+    <div style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${tip.color}33`,borderLeft:`3px solid ${tip.color}`,borderRadius:12,overflow:"hidden"}}>
+      <div onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",cursor:"pointer"}}>
+        <span style={{fontSize:22,flexShrink:0}}>{tip.icon}</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:"bold",color:"#e8e0d8"}}>{tip.title}</div>
+          <div style={{fontSize:11,color:"#8a9a8a",marginTop:2}}>{tip.summary}</div>
+        </div>
+        <span style={{color:tip.color,fontSize:16,transition:"transform 0.2s",transform:open?"rotate(180deg)":"rotate(0deg)",flexShrink:0}}>▾</span>
+      </div>
+      {open&&<div style={{padding:"0 16px 14px 50px",fontSize:13,color:"#b8c8b0",lineHeight:1.75,borderTop:`1px solid ${tip.color}22`}}><div style={{paddingTop:10}}>{tip.body}</div></div>}
+    </div>
+  );
+}
+
+/* ── ONBOARDING ── */
+function Onboarding({onComplete}){
+  const[step,setStep]=useState(0);
+  const[name,setName]=useState("");
+  const[avatar,setAvatar]=useState("🎾");
+  const[dob,setDob]=useState("");
+  const[stage,setStage]=useState("red1");
+  const[coachName,setCoachName]=useState("");
+  const[club,setClub]=useState("");
+  const steps=["Who's playing?","Pick an avatar","Current level","Coach & club"];
+  const canNext=[name.trim().length>0,true,true,true];
+  const iStyle={width:"100%",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,color:"#f0ede6",fontFamily:"inherit",fontSize:15,padding:"11px 14px",outline:"none",boxSizing:"border-box"};
+  function finish(){onComplete({name:name.trim(),avatar,dob,currentStage:stage,coachName,club});}
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0a1628 0%,#0d2218 50%,#0a1628 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{width:"100%",maxWidth:420,animation:"fadeIn 0.4s ease"}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:48,marginBottom:8}}>🎾</div>
+          <div style={{fontSize:22,fontWeight:"bold"}}>Junior Tennis Tracker</div>
+          <div style={{fontSize:12,color:"#6a9a7a",letterSpacing:1,textTransform:"uppercase",marginTop:3}}>Let's set up your player</div>
+        </div>
+        <div style={{display:"flex",gap:6,marginBottom:20}}>
+          {steps.map((_,i)=><div key={i} style={{height:5,flex:1,borderRadius:3,background:i<=step?"#2D9C4A":"rgba(255,255,255,0.1)",transition:"background 0.3s"}}/>)}
+        </div>
+        <div style={{fontSize:12,color:"#6a9a7a",textAlign:"center",marginBottom:14,textTransform:"uppercase",letterSpacing:1}}>Step {step+1} of {steps.length} · {steps[step]}</div>
+        <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"26px 22px",marginBottom:14}}>
+          {step===0&&(
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{textAlign:"center",fontSize:36}}>👶</div>
+              <div style={{fontSize:16,fontWeight:"bold",textAlign:"center"}}>What's your child's name?</div>
+              <input autoFocus value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&name.trim()&&setStep(1)} placeholder="e.g. Arjun, Sofia, Jamie..." style={{...iStyle,fontSize:18,textAlign:"center"}}/>
+              <div style={{fontSize:12,color:"#6a7a6a",textAlign:"center"}}>This name will appear on their progress reports</div>
+            </div>
+          )}
+          {step===1&&(
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{textAlign:"center"}}><div style={{fontSize:54,marginBottom:6}}>{avatar}</div><div style={{fontSize:16,fontWeight:"bold"}}>{name}'s avatar</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:7}}>
+                {AVATARS.map(a=><button key={a} onClick={()=>setAvatar(a)} style={{fontSize:20,padding:"5px",borderRadius:9,border:`2px solid ${a===avatar?"#2D9C4A":"transparent"}`,background:a===avatar?"rgba(45,156,74,0.2)":"rgba(255,255,255,0.05)",cursor:"pointer"}}>{a}</button>)}
+              </div>
+              <div>
+                <div style={{fontSize:12,color:"#8a9a8a",marginBottom:5}}>Date of birth <span style={{color:"#4a5a4a"}}>(optional)</span></div>
+                <input type="date" value={dob} onChange={e=>setDob(e.target.value)} style={{...iStyle,colorScheme:"dark"}}/>
+              </div>
+            </div>
+          )}
+          {step===2&&(
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{fontSize:16,fontWeight:"bold",textAlign:"center"}}>Where is {name} right now?</div>
+              <div style={{fontSize:12,color:"#7a8a7a",textAlign:"center",marginBottom:2}}>You can change this anytime</div>
+              {STAGES.map(s=>(
+                <div key={s.id} onClick={()=>setStage(s.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 15px",borderRadius:13,cursor:"pointer",background:stage===s.id?`${s.color}22`:"rgba(255,255,255,0.04)",border:`2px solid ${stage===s.id?s.color+"88":"rgba(255,255,255,0.08)"}`,transition:"all 0.2s"}}>
+                  <span style={{fontSize:26,flexShrink:0}}>{s.emoji}</span>
+                  <div style={{flex:1}}><div style={{fontSize:14,fontWeight:stage===s.id?700:400,color:stage===s.id?s.color:"#e0e8d8"}}>{s.label}</div><div style={{fontSize:11,color:"#7a8a7a"}}>{s.ageRange} · {s.courtSize}</div></div>
+                  {stage===s.id&&<span style={{color:s.color,fontSize:18}}>✓</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          {step===3&&(
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{fontSize:16,fontWeight:"bold",textAlign:"center"}}>Coach & program</div>
+              <div style={{fontSize:12,color:"#7a8a7a",textAlign:"center",marginBottom:2}}>These appear on progress reports</div>
+              <div>
+                <div style={{fontSize:12,color:"#8a9a8a",marginBottom:5}}>Coach's name <span style={{color:"#4a5a4a"}}>(optional)</span></div>
+                <input value={coachName} onChange={e=>setCoachName(e.target.value)} placeholder="e.g. Coach Maria" style={iStyle}/>
+              </div>
+              <div>
+                <div style={{fontSize:12,color:"#8a9a8a",marginBottom:6}}>Club / Program</div>
+                {CLUBS.map(c=>(
+                  <div key={c} onClick={()=>setClub(c)} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 12px",borderRadius:9,cursor:"pointer",marginBottom:5,background:club===c?"rgba(45,156,74,0.15)":"rgba(255,255,255,0.04)",border:`1px solid ${club===c?"#2D9C4A88":"rgba(255,255,255,0.08)"}`,transition:"all 0.15s"}}>
+                    <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${club===c?"#2D9C4A":"rgba(255,255,255,0.3)"}`,background:club===c?"#2D9C4A":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{club===c&&<span style={{fontSize:8,color:"#fff"}}>✓</span>}</div>
+                    <span style={{fontSize:12,color:club===c?"#a0d8b0":"#b0b8b0"}}>{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          {step>0&&<button onClick={()=>setStep(s=>s-1)} style={{flex:1,padding:"13px",borderRadius:14,background:"rgba(255,255,255,0.07)",color:"#ccc",border:"none",cursor:"pointer",fontSize:14}}>← Back</button>}
+          {step<3
+            ?<button onClick={()=>canNext[step]&&setStep(s=>s+1)} style={{flex:2,padding:"13px",borderRadius:14,background:canNext[step]?"#2D9C4A":"rgba(255,255,255,0.07)",color:canNext[step]?"#fff":"#555",border:"none",cursor:"pointer",fontSize:14,fontWeight:700,transition:"all 0.2s"}}>Continue →</button>
+            :<button onClick={finish} style={{flex:2,padding:"13px",borderRadius:14,background:"#2D9C4A",color:"#fff",border:"none",cursor:"pointer",fontSize:15,fontWeight:700}}>🎾 Start Tracking!</button>
+          }
+        </div>
+        {step===3&&<div style={{textAlign:"center",marginTop:10}}><span onClick={finish} style={{fontSize:12,color:"#4a6a5a",cursor:"pointer",textDecoration:"underline"}}>Skip for now</span></div>}
+      </div>
+    </div>
+  );
+}
+
+/* ── LEARN MODULES ── */
+function GripModule(){
+  const[active,setActive]=useState(0);
+  const grips=[
+    {name:"Eastern Forehand",color:"#E8382B",best:"Red Ball 1 & 2",desc:"Rest your palm on the side bevel — like shaking hands with the racket.",tip:"Tell your child: 'Shake hands with your racket!'"},
+    {name:"Continental",color:"#F5820D",best:"Serves & volleys",desc:"Hold it like a hammer — knuckle on the top bevel. Used for serves, volleys, and slices.",tip:"Tell your child: 'Hold it like a hammer!'"},
+    {name:"Two-Handed BH",color:"#2D9C4A",best:"Orange & Green",desc:"Two hands together for power and control on the backhand side.",tip:"Tell your child: 'Two hands make it stronger!'"},
+  ];
+  const g=grips[active];
+  const HandSVG=({g,i})=>(
+    <svg viewBox="0 0 160 180" width="130" height="145">
+      <rect x="68" y="92" width="22" height="70" rx="8" fill="#8B4513" stroke="#5C2D00" strokeWidth="2"/>
+      {[0,10,20].map(y=><rect key={y} x="72" y={97+y} width="14" height="3" rx="1" fill="#A0522D" opacity="0.5"/>)}
+      <ellipse cx="79" cy="57" rx="38" ry="46" fill="none" stroke="#444" strokeWidth="7"/>
+      {[-22,-12,-2,8,18,28].map(x=><line key={x} x1={79+x} y1={15} x2={79+x} y2={93} stroke="#bbb" strokeWidth="1.2" opacity="0.6"/>)}
+      {[-30,-20,-10,0,10,20,30,40].map(y=><line key={y} x1={44} y1={57+y} x2={114} y2={57+y} stroke="#bbb" strokeWidth="1.2" opacity="0.6"/>)}
+      {i===2
+        ?<><ellipse cx="79" cy="135" rx="18" ry="20" fill="#C8886A" stroke="#B07060" strokeWidth="1.5"/>
+          {[[-11,122],[-5,115],[1,113],[8,115],[13,122]].map(([dx,fy],j)=><ellipse key={j} cx={79+dx} cy={fy} rx="6" ry="11" fill="#C8886A" stroke="#B07060" strokeWidth="1"/>)}
+          <ellipse cx="79" cy="114" rx="18" ry="20" fill="#FDDCC4" stroke="#D4907A" strokeWidth="1.5"/>
+          {[[-11,101],[-5,94],[1,92],[8,94],[13,101]].map(([dx,fy],j)=><ellipse key={j} cx={79+dx} cy={fy} rx="6" ry="11" fill="#FDDCC4" stroke="#D4907A" strokeWidth="1"/>)}</>
+        :<><ellipse cx={i===1?79:79} cy={i===1?130:128} rx="19" ry={i===1?22:23} fill="#FDDCC4" stroke="#D4907A" strokeWidth="1.5" transform={i===1?"rotate(-15,79,130)":undefined}/>
+          {[[-12,116],[-6,109],[1,107],[8,109],[13,116]].map(([dx,fy],j)=><ellipse key={j} cx={79+dx} cy={fy} rx="6" ry="12" fill="#FDDCC4" stroke="#D4907A" strokeWidth="1" transform={i===1?`rotate(-15,${79+dx},${fy})`:undefined}/>)}</>
+      }
+    </svg>
+  );
+  return(
+    <div>
+      <div style={{display:"flex",gap:7,marginBottom:14}}>
+        {grips.map((gr,i)=><button key={i} onClick={()=>setActive(i)} style={{flex:1,padding:"9px 4px",borderRadius:10,border:"none",cursor:"pointer",background:i===active?gr.color:"rgba(255,255,255,0.06)",color:i===active?"#fff":"#aaa",fontFamily:"inherit",fontSize:11,fontWeight:i===active?700:400,transition:"all 0.2s"}}>{gr.name}</button>)}
+      </div>
+      <div style={{background:`${g.color}14`,border:`2px solid ${g.color}44`,borderRadius:14,padding:"18px",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+        <HandSVG g={g} i={active}/>
+        <div style={{fontSize:16,fontWeight:"bold",color:g.color}}>{g.name}</div>
+        <div style={{fontSize:11,color:"#7a9a7a"}}>Best for: {g.best}</div>
+        <div style={{fontSize:13,color:"#c0d0c0",lineHeight:1.65,textAlign:"center"}}>{g.desc}</div>
+        <div style={{background:`${g.color}22`,border:`1px solid ${g.color}44`,borderRadius:10,padding:"9px 14px",fontSize:13,color:g.color,fontStyle:"italic",textAlign:"center"}}>💬 {g.tip}</div>
+      </div>
+    </div>
+  );
+}
+
+function ShotsModule(){
+  const[active,setActive]=useState(0);
+  const[frame,setFrame]=useState(0);
+  const timerRef=useRef();
+  const shots=[
+    {name:"Forehand",color:"#E8382B",frames:4,tips:["Turn shoulders early","Step forward, opposite foot","Swing low to high","Finish over your shoulder"]},
+    {name:"Backhand",color:"#F5820D",frames:4,tips:["Turn opposite shoulder","Step across your body","Swing low to high","Finish high with both hands"]},
+    {name:"Serve",color:"#2D9C4A",frames:4,tips:["Toss the ball straight up","Reach up like a trophy","Hit at full stretch","Swing across your body"]},
+  ];
+  const shot=shots[active];
+  useEffect(()=>{clearInterval(timerRef.current);setFrame(0);timerRef.current=setInterval(()=>setFrame(f=>(f+1)%shot.frames),900);return()=>clearInterval(timerRef.current);},[active]);
+  const labels=[["1. Ready","2. Turn","3. Swing!","4. Follow Through"],["1. Ready","2. Turn","3. Swing!","4. Finish High"],["1. Ready","2. Toss","3. Hit!","4. Follow Through"]];
+  const playerColors=["#F5820D","#2D9C4A","#8B5CF6"];
+  const moods=["😊","😤","😎"];
+  return(
+    <div>
+      <div style={{display:"flex",gap:7,marginBottom:14}}>
+        {shots.map((s,i)=><button key={i} onClick={()=>setActive(i)} style={{flex:1,padding:"9px 6px",borderRadius:10,border:"none",cursor:"pointer",background:i===active?s.color:"rgba(255,255,255,0.06)",color:i===active?"#fff":"#aaa",fontFamily:"inherit",fontSize:12,fontWeight:i===active?700:400,transition:"all 0.2s"}}>{s.name}</button>)}
+      </div>
+      <div style={{background:`${shot.color}14`,border:`2px solid ${shot.color}44`,borderRadius:14,padding:"18px",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+        <svg viewBox="0 0 200 200" width="170" height="170">
+          <line x1="20" y1="168" x2="180" y2="168" stroke="#4a6a4a" strokeWidth="3"/>
+          <circle cx="100" cy="82" r="15" fill={playerColors[active]} stroke={shot.color} strokeWidth="2"/>
+          <text x="100" y="87" textAnchor="middle" fontSize="14">{moods[active]}</text>
+          <line x1="100" y1="97" x2="100" y2="142" stroke={playerColors[active]} strokeWidth="5" strokeLinecap="round"/>
+          <line x1="100" y1="142" x2={frame<2?88:80} y2="168" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/>
+          <line x1="100" y1="142" x2={frame<2?112:120} y2="168" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/>
+          {active===0&&<>
+            {frame===0&&<><line x1="100" y1="112" x2="128" y2="128" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="126" y="108" width="7" height="26" rx="3" fill="#8B4513" transform="rotate(30,129,118)"/></>}
+            {frame===1&&<><line x1="100" y1="110" x2="138" y2="116" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="136" y="97" width="7" height="26" rx="3" fill="#8B4513" transform="rotate(10,139,108)"/></>}
+            {frame===2&&<><line x1="100" y1="108" x2="140" y2="98" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="138" y="79" width="7" height="26" rx="3" fill="#8B4513" transform="rotate(-10,141,91)"/><circle cx="157" cy="88" r="8" fill="#CDFF00" stroke="#AAD400" strokeWidth="1.5"/></>}
+            {frame===3&&<><line x1="100" y1="106" x2="80" y2="88" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="60" y="72" width="7" height="26" rx="3" fill="#8B4513" transform="rotate(-60,63,84)"/></>}
+          </>}
+          {active===1&&<>
+            {frame===0&&<><line x1="100" y1="110" x2="74" y2="122" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="54" y="110" width="7" height="24" rx="3" fill="#8B4513" transform="rotate(-30,57,120)"/></>}
+            {frame===1&&<><line x1="100" y1="110" x2="68" y2="108" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="48" y="98" width="7" height="24" rx="3" fill="#8B4513" transform="rotate(-10,51,108)"/></>}
+            {frame===2&&<><line x1="100" y1="108" x2="64" y2="96" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="44" y="81" width="7" height="24" rx="3" fill="#8B4513" transform="rotate(10,47,91)"/><circle cx="36" cy="86" r="8" fill="#CDFF00" stroke="#AAD400" strokeWidth="1.5"/></>}
+            {frame===3&&<><line x1="100" y1="106" x2="118" y2="86" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="118" y="68" width="7" height="24" rx="3" fill="#8B4513" transform="rotate(30,121,78)"/></>}
+          </>}
+          {active===2&&<>
+            <circle cx={frame===0?85:frame===1?82:78} cy={frame===0?82:frame===1?78:75} r="15" fill={playerColors[active]} stroke={shot.color} strokeWidth="2"/>
+            {frame<=1&&<line x1={frame===0?85:82} y1="108" x2={frame===0?68:60} y2={frame===0?120:102} stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/>}
+            {frame===1&&<circle cx="58" cy="68" r="7" fill="#CDFF00" stroke="#AAD400" strokeWidth="1.5"/>}
+            {frame>=2&&<line x1="85" y1="110" x2="68" y2="120" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/>}
+            {frame===0&&<><line x1="85" y1="108" x2="112" y2="118" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="110" y="100" width="7" height="26" rx="3" fill="#8B4513" transform="rotate(20,113,111)"/></>}
+            {frame===1&&<><line x1="82" y1="100" x2="118" y2="82" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="118" y="60" width="7" height="28" rx="3" fill="#8B4513" transform="rotate(-20,121,73)"/></>}
+            {frame===2&&<><line x1="78" y1="92" x2="124" y2="68" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="126" y="44" width="7" height="28" rx="3" fill="#8B4513" transform="rotate(-30,129,57)"/><circle cx="146" cy="50" r="7" fill="#CDFF00" stroke="#AAD400" strokeWidth="1.5"/></>}
+            {frame===3&&<><line x1="85" y1="100" x2="68" y2="118" stroke={playerColors[active]} strokeWidth="4" strokeLinecap="round"/><rect x="50" y="112" width="7" height="26" rx="3" fill="#8B4513" transform="rotate(-50,53,123)"/></>}
+          </>}
+          <text x="100" y="192" textAnchor="middle" fill={shot.color} fontSize="11" fontWeight="bold">{labels[active][frame]}</text>
+        </svg>
+        <div style={{display:"flex",gap:6}}>{Array.from({length:shot.frames}).map((_,i)=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:i===frame?shot.color:"rgba(255,255,255,0.2)",transition:"background 0.3s"}}/>)}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,width:"100%"}}>
+          {shot.tips.map((t,i)=><div key={i} style={{background:`${shot.color}14`,border:`1px solid ${shot.color}33`,borderRadius:8,padding:"7px 10px",fontSize:12,color:"#c0d0c0"}}><span style={{color:shot.color,fontWeight:"bold"}}>{i+1}.</span> {t}</div>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CourtModule(){
+  const[hovered,setHovered]=useState(null);
+  const zones=[
+    {id:"baseline",label:"Baseline",color:"#E8382B",desc:"The back boundary line. Rallies often start and happen here.",x:10,y:160,w:260,h:8},
+    {id:"service",label:"Service Box",color:"#F5820D",desc:"Where the serve must land. Left = Ad side, Right = Deuce side.",x:65,y:80,w:150,h:80},
+    {id:"net",label:"The Net",color:"#2D9C4A",desc:"Divides the court. Lower in the middle (91cm), higher at the posts (107cm).",x:10,y:127,w:260,h:6},
+    {id:"alley",label:"Singles Sideline",color:"#8B5CF6",desc:"The inner line used in singles. The outer lines are for doubles only.",x:65,y:10,w:8,h:155},
+    {id:"noMansLand",label:"No Man's Land",color:"#F59E0B",desc:"Between the service line and baseline — dangerous to stand here during a rally!",x:65,y:160,w:150,h:45},
+  ];
+  const hz=zones.find(z=>z.id===hovered);
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+      <div style={{fontSize:12,color:"#8a9a8a",textAlign:"center"}}>Tap any zone to learn what it's called</div>
+      <svg viewBox="0 0 280 215" width="100%" style={{maxWidth:280}}>
+        <rect x="10" y="10" width="260" height="195" rx="3" fill="#2A5298" stroke="#1a3a6a" strokeWidth="2"/>
+        <rect x="10" y="10" width="55" height="195" fill="#1E4080" opacity="0.4"/>
+        <rect x="215" y="10" width="55" height="195" fill="#1E4080" opacity="0.4"/>
+        <rect x="65" y="80" width="75" height="48" fill="#3060A8" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+        <rect x="140" y="80" width="75" height="48" fill="#3060A8" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+        <rect x="10" y="10" width="260" height="195" rx="3" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2"/>
+        <line x1="65" y1="10" x2="65" y2="205" stroke="rgba(255,255,255,0.9)" strokeWidth="2"/>
+        <line x1="215" y1="10" x2="215" y2="205" stroke="rgba(255,255,255,0.9)" strokeWidth="2"/>
+        <line x1="10" y1="80" x2="270" y2="80" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+        <line x1="10" y1="127" x2="270" y2="127" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+        <line x1="10" y1="160" x2="270" y2="160" stroke="rgba(255,255,255,0.9)" strokeWidth="2"/>
+        <line x1="140" y1="80" x2="140" y2="127" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+        <rect x="10" y="127" width="260" height="6" rx="2" fill="#555" stroke="#333" strokeWidth="1"/>
+        <rect x="6" y="120" width="5" height="20" rx="2" fill="#777"/>
+        <rect x="269" y="120" width="5" height="20" rx="2" fill="#777"/>
+        {zones.map(z=><rect key={z.id} x={z.x} y={z.y} width={z.w} height={z.h} fill={hovered===z.id?z.color:"transparent"} opacity="0.35" style={{cursor:"pointer"}} onClick={()=>setHovered(hovered===z.id?null:z.id)}/>)}
+        <text x="140" y="107" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="7">SERVICE BOX</text>
+        <text x="140" y="148" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="6">NO MAN'S LAND</text>
+      </svg>
+      <div style={{width:"100%",maxWidth:280}}>
+        {hz
+          ?<div style={{background:`${hz.color}22`,border:`2px solid ${hz.color}55`,borderRadius:12,padding:"12px 14px"}}><div style={{fontSize:14,fontWeight:"bold",color:hz.color,marginBottom:4}}>{hz.label}</div><div style={{fontSize:12,color:"#c0d0c0",lineHeight:1.6}}>{hz.desc}</div></div>
+          :<div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,padding:"12px 14px",textAlign:"center"}}><div style={{fontSize:11,color:"#6a7a6a",marginBottom:7}}>👆 Tap a zone above</div><div style={{display:"flex",flexWrap:"wrap",gap:5,justifyContent:"center"}}>{zones.map(z=><span key={z.id} onClick={()=>setHovered(z.id)} style={{fontSize:10,background:`${z.color}22`,color:z.color,padding:"3px 9px",borderRadius:10,cursor:"pointer"}}>{z.label}</span>)}</div></div>
+        }
+      </div>
+    </div>
+  );
+}
+
+function LegendsModule(){
+  const[active,setActive]=useState(0);
+  const legends=[
+    {name:"Roger Federer",country:"🇨🇭 Switzerland",emoji:"👑",color:"#F59E0B",fact:"Won 20 Grand Slams. Famous for his silky smooth forehand and elegant movement.",kidTip:"Roger never stopped practicing — even when he was already the best in the world.",titles:"20 Grand Slams · 8× Wimbledon",fun:"He once hit 78 shots in a single rally during practice!"},
+    {name:"Serena Williams",country:"🇺🇸 USA",emoji:"⚡",color:"#E8382B",fact:"Won 23 Grand Slams — the most by any player in the Open Era. Her serve is one of the most powerful ever recorded.",kidTip:"Serena started playing at age 3 with her dad on public courts in Compton, California.",titles:"23 Grand Slams · 4× Olympic Gold",fun:"She returned to win the Australian Open while 8 weeks pregnant!"},
+    {name:"Rafael Nadal",country:"🇪🇸 Spain",emoji:"🔥",color:"#C0271C",fact:"The King of Clay! Won 14 French Open titles. Known for incredible topspin and never-give-up attitude.",kidTip:"Rafa always gives 100% — even in practice. He never gives up on a single point!",titles:"22 Grand Slams · 14× French Open",fun:"He bounces the ball before every serve — always the same number of times."},
+    {name:"Naomi Osaka",country:"🇯🇵 Japan",emoji:"🌸",color:"#8B5CF6",fact:"Won 4 Grand Slams and became the first Asian player ranked #1 in the world.",kidTip:"Naomi was born in Japan and moved to the US as a child. She speaks both English and Japanese!",titles:"4 Grand Slams · 2× US Open",fun:"She loves anime and video games as much as tennis!"},
+    {name:"Arthur Ashe",country:"🇺🇸 USA",emoji:"✊",color:"#0EA5E9",fact:"The first Black man to win Wimbledon, the US Open, and the Australian Open. A hero on and off the court.",kidTip:"Arthur showed tennis is for everyone. The US Open stadium is named after him.",titles:"3 Grand Slams · First Black World #1",fun:"He read 12 books a month and believed education was as important as tennis."},
+  ];
+  const l=legends[active];
+  return(
+    <div>
+      <div style={{fontSize:12,color:"#8a9a8a",textAlign:"center",marginBottom:12}}>Read these stories together with your child</div>
+      <div style={{display:"flex",gap:6,marginBottom:12,overflowX:"auto",paddingBottom:2}}>
+        {legends.map((lg,i)=><button key={i} onClick={()=>setActive(i)} style={{flexShrink:0,padding:"7px 11px",borderRadius:10,border:"none",cursor:"pointer",background:i===active?lg.color:"rgba(255,255,255,0.06)",color:i===active?"#fff":"#aaa",fontFamily:"inherit",fontSize:11,fontWeight:i===active?700:400}}>{lg.emoji} {lg.name.split(" ")[0]}</button>)}
+      </div>
+      <div style={{background:"rgba(255,255,255,0.04)",border:`2px solid ${l.color}44`,borderRadius:14,padding:"16px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+          <div style={{width:52,height:52,borderRadius:"50%",background:`${l.color}22`,border:`3px solid ${l.color}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>{l.emoji}</div>
+          <div><div style={{fontSize:17,fontWeight:"bold"}}>{l.name}</div><div style={{fontSize:11,color:"#8a9a8a"}}>{l.country}</div><div style={{fontSize:10,color:l.color,marginTop:1}}>{l.titles}</div></div>
+        </div>
+        <div style={{fontSize:13,color:"#c0d0c0",lineHeight:1.7,marginBottom:9}}>{l.fact}</div>
+        <div style={{background:`${l.color}18`,border:`1px solid ${l.color}33`,borderRadius:10,padding:"9px 13px",marginBottom:7}}>
+          <div style={{fontSize:10,color:l.color,fontWeight:"bold",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>💡 For your child</div>
+          <div style={{fontSize:12,color:"#c0d0c0",lineHeight:1.6}}>{l.kidTip}</div>
+        </div>
+        <div style={{background:"rgba(255,255,255,0.04)",borderRadius:10,padding:"8px 12px"}}><span style={{fontSize:10,color:"#7a9a7a",fontWeight:"bold"}}>🤩 Fun Fact: </span><span style={{fontSize:11,color:"#9aaa9a"}}>{l.fun}</span></div>
+      </div>
+    </div>
+  );
+}
+
+function RulesModule(){
+  const[active,setActive]=useState(0);
+  const rules=[
+    {title:"Scoring a Game",icon:"🔢",color:"#0EA5E9",steps:[{n:"0 pts",called:"Love",emoji:"❤️",why:"No one knows why — 'love' means zero in tennis!"},{n:"1 pt",called:"15",emoji:"1️⃣",why:"Old clocks were used — the hand moved to the 15-minute mark."},{n:"2 pts",called:"30",emoji:"2️⃣",why:"The clock hand moved to 30."},{n:"3 pts",called:"40",emoji:"3️⃣",why:"Originally 45, shortened to 40 to allow for Deuce."},{n:"4 pts",called:"Game!",emoji:"🎉",why:"You win the game — unless it's 40-40 (Deuce)!"}],note:"At Deuce (40-40), you must win 2 in a row. Those points are called Advantage and Game."},
+    {title:"Winning a Set",icon:"📊",color:"#2D9C4A",steps:[{n:"6 games",called:"Win the Set",emoji:"✅",why:"Must be ahead by 2 (e.g. 6-4 or 6-3)."},{n:"6-6 tie",called:"Tiebreak!",emoji:"⚡",why:"First to 7 points (by 2) wins the tiebreak 7-6."},{n:"Win 2 sets",called:"Win Match!",emoji:"🏆",why:"Best of 3 sets — first to win 2 wins the match!"}],note:"Junior tennis often uses shorter formats like 7-game sets or match tiebreaks."},
+    {title:"Serves & Faults",icon:"🎾",color:"#F5820D",steps:[{n:"1st serve",called:"Full speed!",emoji:"💨",why:"Players usually go big on 1st serve since they have a backup."},{n:"Fault",called:"Try again",emoji:"⚠️",why:"Ball outside box, hits net, or foot-fault."},{n:"2nd serve",called:"Be careful!",emoji:"🧘",why:"Must go in — usually hit more carefully."},{n:"Double fault",called:"Point lost",emoji:"😬",why:"Two faults in a row — opponent wins the point."},{n:"Let",called:"Serve again",emoji:"🔄",why:"Serve clips net but lands in — replay with no fault."}],note:"Red Ball players can use underhand serves — much easier to get the ball in play!"},
+    {title:"In & Out Calls",icon:"👁️",color:"#8B5CF6",steps:[{n:"On the line",called:"In!",emoji:"✅",why:"If any part of the ball touches the line, it's in."},{n:"Outside line",called:"Out!",emoji:"❌",why:"The whole ball must be outside the line."},{n:"Not sure?",called:"Good ball!",emoji:"🤝",why:"In junior tennis, if unsure — call it in. Good sportsmanship!"},{n:"Ball hits net",called:"Still in play",emoji:"🕸️",why:"If it goes over after hitting the net, keep playing!"}],note:"Good sportsmanship means giving your opponent the benefit of the doubt on close calls."},
+  ];
+  const r=rules[active];
+  return(
+    <div>
+      <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+        {rules.map((rl,i)=><button key={i} onClick={()=>setActive(i)} style={{flexShrink:0,padding:"7px 10px",borderRadius:10,border:"none",cursor:"pointer",background:i===active?rl.color:"rgba(255,255,255,0.06)",color:i===active?"#fff":"#aaa",fontFamily:"inherit",fontSize:11,fontWeight:i===active?700:400}}>{rl.icon} {rl.title.split(" ")[0]}</button>)}
+      </div>
+      <div style={{background:"rgba(255,255,255,0.04)",border:`2px solid ${r.color}44`,borderRadius:14,padding:"15px"}}>
+        <div style={{fontSize:14,fontWeight:"bold",color:r.color,marginBottom:11}}>{r.icon} {r.title}</div>
+        <div style={{display:"grid",gap:6,marginBottom:11}}>
+          {r.steps.map((s,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"8px 10px",background:"rgba(255,255,255,0.04)",borderRadius:9}}>
+            <span style={{fontSize:17,flexShrink:0}}>{s.emoji}</span>
+            <div><div style={{display:"flex",gap:6,alignItems:"center",marginBottom:2}}><span style={{fontSize:10,color:"#7a8a7a"}}>{s.n}</span><span style={{fontSize:9,color:r.color}}>→</span><span style={{fontSize:12,fontWeight:"bold",color:"#e0e8d8"}}>{s.called}</span></div><div style={{fontSize:10,color:"#8a9a8a",lineHeight:1.45}}>{s.why}</div></div>
+          </div>)}
+        </div>
+        <div style={{background:`${r.color}18`,border:`1px solid ${r.color}33`,borderRadius:10,padding:"9px 12px",fontSize:11,color:"#b0c0a0",lineHeight:1.6}}>📌 {r.note}</div>
+      </div>
+    </div>
+  );
+}
+
+function TrophyRoom({earned}){
+  return(
+    <div>
+      <div style={{fontSize:12,color:"#8a9a8a",textAlign:"center",marginBottom:12}}>
+        {earned.length===0?"Complete skills to earn your first achievement!":`${earned.length} of ${ACHIEVEMENTS.length} achievements earned`}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:9}}>
+        {ACHIEVEMENTS.map(a=>{const got=earned.includes(a.id);return(
+          <div key={a.id} style={{background:got?`${a.color}22`:"rgba(255,255,255,0.03)",border:`1px solid ${got?a.color+"55":"rgba(255,255,255,0.07)"}`,borderRadius:12,padding:"12px 8px",textAlign:"center",opacity:got?1:0.35,transition:"all 0.3s"}}>
+            <div style={{fontSize:24,marginBottom:5,filter:got?"none":"grayscale(1)"}}>{a.icon}</div>
+            <div style={{fontSize:11,fontWeight:"bold",color:got?a.color:"#5a6a5a",marginBottom:2}}>{a.label}</div>
+            <div style={{fontSize:9,color:"#5a6a5a",lineHeight:1.4}}>{a.desc}</div>
+            {got&&<div style={{marginTop:5,fontSize:9,color:a.color,background:`${a.color}22`,borderRadius:7,padding:"2px 5px"}}>✓ Earned!</div>}
+          </div>
+        );})}
+      </div>
+    </div>
+  );
+}
+
+/* ── DASHBOARD ── */
+function Dashboard({player,onNavigate,getStageProgress,getCurrentBall}){
+  const currentBall=getCurrentBall();
+  const totalSkills=STAGES.flatMap(s=>s.skills).length;
+  const totalDone=STAGES.flatMap(s=>s.skills).filter(sk=>player.checked[sk.id]).length;
+  const overallPct=Math.round((totalDone/totalSkills)*100);
+  const earned=player.earnedAchievements||[];
+  const currentStage=STAGES.find(s=>s.id===player.profile?.currentStage)||currentBall;
+  const nextSkill=currentStage.skills.find(sk=>!player.checked[sk.id]);
+  const sp=getStageProgress(currentStage.id);
+  const stageIdx=STAGES.findIndex(s=>s.id===currentBall.id);
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14,animation:"fadeIn 0.3s ease"}}>
+      {/* Hero */}
+      <div style={{background:`linear-gradient(135deg,${currentBall.accent}30,${currentBall.color}18,transparent)`,border:`1px solid ${currentBall.color}44`,borderRadius:18,padding:"18px 16px",display:"flex",alignItems:"center",gap:14}}>
+        <div style={{position:"relative",flexShrink:0}}>
+          <div style={{width:68,height:68,borderRadius:"50%",background:`${currentBall.color}22`,border:`3px solid ${currentBall.color}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34}}>{player.profile?.avatar||"🎾"}</div>
+          <div style={{position:"absolute",bottom:-2,right:-2,fontSize:14,background:"#0a1628",borderRadius:"50%",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center",border:`2px solid ${currentBall.color}`}}>{currentBall.emoji}</div>
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:21,fontWeight:"bold",marginBottom:2}}>{player.profile?.name||"Player"}</div>
+          <div style={{color:currentBall.color,fontWeight:600,fontSize:12}}>{currentBall.label}{player.profile?.coachName&&<span style={{color:"#7a9a7a",fontWeight:400}}> · {player.profile.coachName}</span>}</div>
+          {player.profile?.club&&player.profile.club!=="Other / Independent"&&<div style={{fontSize:10,color:"#6a7a6a",marginTop:1}}>📍 {player.profile.club}</div>}
+          <div style={{fontSize:10,color:"#6a7a6a",marginTop:3}}>{earned.length>0?`${earned.length} achievements 🏅`:"Earn your first achievement!"}</div>
+        </div>
+        <button onClick={()=>onNavigate("profile")} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,color:"#999",padding:"6px 9px",cursor:"pointer",fontSize:10,flexShrink:0}}>Edit ✏️</button>
+      </div>
+      {/* Journey path */}
+      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:"16px 14px"}}>
+        <div style={{fontSize:11,color:"#6a9a7a",textTransform:"uppercase",letterSpacing:1,marginBottom:13,fontWeight:600}}>🗺️ TCSP Journey — Red 1.0 → Orange 3.0 → Green/Yellow</div>
+        <div style={{display:"flex",alignItems:"center"}}>
+          {STAGES.map((s,i)=>{
+            const{pct}=getStageProgress(s.id);
+            const isActive=s.id===currentBall.id;
+            const isDone=pct===100;
+            const isPast=i<stageIdx;
+            return(
+              <div key={s.id} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:5,position:"relative",cursor:"pointer"}} onClick={()=>onNavigate("skills",s.id)}>
+                {i>0&&<div style={{position:"absolute",left:0,top:22,width:"50%",height:3,background:isPast||isActive?"#2D9C4A":"rgba(255,255,255,0.1)",zIndex:0,transition:"background 0.4s"}}/>}
+                {i<STAGES.length-1&&<div style={{position:"absolute",right:0,top:22,width:"50%",height:3,background:isDone?"#2D9C4A":"rgba(255,255,255,0.1)",zIndex:0,transition:"background 0.4s"}}/>}
+                <div style={{position:"relative",zIndex:1,width:44,height:44,borderRadius:"50%",background:isActive?`linear-gradient(135deg,${s.color},${s.accent})`:isDone?`${s.color}44`:"rgba(255,255,255,0.06)",border:`3px solid ${isActive||isDone?s.color:"rgba(255,255,255,0.1)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,boxShadow:isActive?`0 0 18px ${s.color}66`:"none",transition:"all 0.3s"}}>
+                  {isDone?"✓":s.emoji}
+                </div>
+                <div style={{fontSize:9,color:isActive?s.color:isDone?"#5a8a6a":"#4a5a4a",fontWeight:isActive?700:400,textAlign:"center",lineHeight:1.3}}>{s.short}</div>
+                <div style={{fontSize:8,color:isActive?s.color+"bb":"#3a4a3a"}}>{pct}%</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {/* Current focus */}
+      <div style={{background:`${currentBall.color}14`,border:`1px solid ${currentBall.color}44`,borderRadius:16,padding:"16px 14px"}}>
+        <div style={{fontSize:11,color:"#6a9a7a",textTransform:"uppercase",letterSpacing:1,marginBottom:11,fontWeight:600}}>🎯 Current Focus — {currentStage.label}</div>
+        <div style={{display:"flex",alignItems:"center",gap:13,marginBottom:12}}>
+          <div style={{position:"relative",width:60,height:60,flexShrink:0}}>
+            <ProgressRing pct={sp.pct} color={currentBall.color} size={60}/>
+            <span style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",fontSize:22}}>{currentBall.emoji}</span>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:18,fontWeight:"bold"}}>{sp.pct}%</div>
+            <div style={{fontSize:11,color:"#8a9a8a"}}>{sp.done} of {sp.total} skills mastered</div>
+            <div style={{height:5,background:"rgba(255,255,255,0.1)",borderRadius:3,marginTop:7}}><div style={{height:"100%",width:`${sp.pct}%`,background:currentBall.color,borderRadius:3,transition:"width 0.5s"}}/></div>
+          </div>
+        </div>
+        {nextSkill
+          ?<div style={{background:"rgba(255,255,255,0.04)",border:`1px dashed ${currentBall.color}66`,borderRadius:11,padding:"11px 13px"}}>
+            <div style={{fontSize:9,color:currentBall.color,textTransform:"uppercase",letterSpacing:1,marginBottom:4,fontWeight:600}}>⚡ Next skill to work on</div>
+            <div style={{fontSize:13,color:"#e0e8d8",lineHeight:1.5,marginBottom:8}}>{nextSkill.text}</div>
+            <button onClick={()=>onNavigate("skills",currentStage.id)} style={{padding:"7px 15px",borderRadius:18,background:currentBall.color,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>View full checklist →</button>
+          </div>
+          :<div style={{background:"rgba(255,255,255,0.04)",borderRadius:11,padding:"11px 13px",textAlign:"center"}}>
+            <div style={{fontSize:18,marginBottom:4}}>🎉 Stage complete!</div>
+            <button onClick={()=>onNavigate("skills",STAGES[Math.min(stageIdx+1,STAGES.length-1)].id)} style={{padding:"7px 15px",borderRadius:18,background:currentBall.color,color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>Start next stage →</button>
+          </div>
+        }
+      </div>
+      {/* Stats row */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:9}}>
+        {[{label:"Overall",value:`${overallPct}%`,sub:"complete",icon:"📊",color:"#2D9C4A",tab:"skills"},{label:"Achievements",value:earned.length,sub:`of ${ACHIEVEMENTS.length}`,icon:"🏅",color:"#F59E0B",tab:"trophies"},{label:"Journal",value:(player.journal||[]).length,sub:"entries",icon:"📓",color:"#8B5CF6",tab:"journal"}].map(s=>(
+          <div key={s.tab} onClick={()=>onNavigate(s.tab)} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${s.color}33`,borderRadius:13,padding:"13px 8px",textAlign:"center",cursor:"pointer"}}>
+            <div style={{fontSize:20,marginBottom:3}}>{s.icon}</div>
+            <div style={{fontSize:18,fontWeight:"bold",color:s.color}}>{s.value}</div>
+            <div style={{fontSize:9,color:"#6a7a6a",marginTop:1}}>{s.label}</div>
+            <div style={{fontSize:8,color:"#4a5a4a"}}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+      {/* Quick access — new features */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:9}}>
+        {[{id:"coach",icon:"📋",label:"Coach Brief",sub:"Share before lessons",color:"#0EA5E9"},{id:"drills",icon:"🎯",label:"Home Drills",sub:"Practice together",color:"#F5820D"},{id:"rescue",icon:"🆘",label:"Practice Rescue",sub:"When it gets hard",color:"#E8382B"}].map(s=>(
+          <div key={s.id} onClick={()=>onNavigate(s.id)} style={{background:`${s.color}12`,border:`1px solid ${s.color}33`,borderRadius:13,padding:"12px 8px",textAlign:"center",cursor:"pointer"}}>
+            <div style={{fontSize:20,marginBottom:3}}>{s.icon}</div>
+            <div style={{fontSize:11,fontWeight:"bold",color:s.color}}>{s.label}</div>
+            <div style={{fontSize:9,color:"#5a6a5a",marginTop:1,lineHeight:1.3}}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Learn shortcut */}
+      <div onClick={()=>onNavigate("learn")} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:13,padding:"13px 15px",cursor:"pointer",display:"flex",alignItems:"center",gap:13}}>
+        <span style={{fontSize:26}}>📚</span>
+        <div style={{flex:1}}><div style={{fontSize:14,fontWeight:"bold"}}>Learn Together</div><div style={{fontSize:11,color:"#7a8a7a",marginTop:1}}>Grips · Shots · Court map · Legends · Rules</div></div>
+        <span style={{color:"#4a6a5a",fontSize:16}}>→</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── PROFILE EDIT MODAL ── */
+function ProfileEditModal({player,onSave,onClose}){
+  const p=player.profile||{};
+  const[name,setName]=useState(p.name||"");
+  const[avatar,setAvatar]=useState(p.avatar||"🎾");
+  const[dob,setDob]=useState(p.dob||"");
+  const[stage,setStage]=useState(p.currentStage||"red1");
+  const[coachName,setCoachName]=useState(p.coachName||"");
+  const[club,setClub]=useState(p.club||"");
+  const iS={width:"100%",background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:9,color:"#f0ede6",fontFamily:"inherit",fontSize:13,padding:"8px 11px",outline:"none",boxSizing:"border-box"};
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.82)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:14,overflowY:"auto"}}>
+      <div style={{background:"#0d2218",border:"1px solid rgba(255,255,255,0.12)",borderRadius:18,padding:"22px 18px",width:"100%",maxWidth:400}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div style={{fontSize:16,fontWeight:"bold"}}>✏️ Edit Profile</div><button onClick={onClose} style={{background:"none",border:"none",color:"#888",fontSize:20,cursor:"pointer",padding:3}}>×</button></div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{textAlign:"center",marginBottom:2}}>
+            <div style={{fontSize:42,marginBottom:7}}>{avatar}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(8,1fr)",gap:5}}>
+              {AVATARS.map(a=><button key={a} onClick={()=>setAvatar(a)} style={{fontSize:17,padding:"4px",borderRadius:7,border:`2px solid ${a===avatar?"#2D9C4A":"transparent"}`,background:a===avatar?"rgba(45,156,74,0.2)":"rgba(255,255,255,0.04)",cursor:"pointer"}}>{a}</button>)}
+            </div>
+          </div>
+          {[["Name",name,setName,"text","e.g. Arjun"],["Date of Birth",dob,setDob,"date",""],["Coach Name",coachName,setCoachName,"text","e.g. Coach Maria"]].map(([label,val,set,type,ph])=>(
+            <div key={label}><div style={{fontSize:11,color:"#8a9a8a",marginBottom:4}}>{label}</div><input type={type} value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{...iS,colorScheme:"dark"}}/></div>
+          ))}
+          <div><div style={{fontSize:11,color:"#8a9a8a",marginBottom:6}}>Current Stage</div>
+            {STAGES.map(s=><div key={s.id} onClick={()=>setStage(s.id)} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 11px",borderRadius:9,cursor:"pointer",marginBottom:5,background:stage===s.id?`${s.color}22`:"rgba(255,255,255,0.04)",border:`1px solid ${stage===s.id?s.color+"66":"rgba(255,255,255,0.07)"}`,transition:"all 0.15s"}}>
+              <span style={{fontSize:18}}>{s.emoji}</span><div style={{flex:1}}><div style={{fontSize:12,color:stage===s.id?s.color:"#c0c8c0"}}>{s.label}</div><div style={{fontSize:9,color:"#6a7a6a"}}>{s.ageRange}</div></div>{stage===s.id&&<span style={{color:s.color,fontSize:14}}>✓</span>}
+            </div>)}
+          </div>
+          <div><div style={{fontSize:11,color:"#8a9a8a",marginBottom:5}}>Club / Program</div>
+            {CLUBS.map(c=><div key={c} onClick={()=>setClub(c)} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 11px",borderRadius:8,cursor:"pointer",marginBottom:4,background:club===c?"rgba(45,156,74,0.15)":"rgba(255,255,255,0.04)",border:`1px solid ${club===c?"#2D9C4A66":"rgba(255,255,255,0.07)"}`,transition:"all 0.15s"}}>
+              <div style={{width:13,height:13,borderRadius:"50%",border:`2px solid ${club===c?"#2D9C4A":"rgba(255,255,255,0.3)"}`,background:club===c?"#2D9C4A":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{club===c&&<span style={{fontSize:7,color:"#fff"}}>✓</span>}</div>
+              <span style={{fontSize:11,color:club===c?"#a0d8b0":"#b0b8b0"}}>{c}</span>
+            </div>)}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:16}}>
+          <button onClick={onClose} style={{flex:1,padding:"10px",borderRadius:11,background:"rgba(255,255,255,0.07)",color:"#ccc",border:"none",cursor:"pointer",fontSize:12}}>Cancel</button>
+          <button onClick={()=>onSave({name,avatar,dob,currentStage:stage,coachName,club})} style={{flex:2,padding:"10px",borderRadius:11,background:"#2D9C4A",color:"#fff",border:"none",cursor:"pointer",fontSize:12,fontWeight:700}}>Save Profile ✓</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SKILL DRILLS DATA — home practice guides per skill
+══════════════════════════════════════════════════════════════════════ */
+const SKILL_DRILLS={
+  r1a:{title:"Self-Feed & Hit Over Net",drills:[{name:"Balloon Toss Hit",steps:["Stand 2–3 feet from the net (or a rope/string)","Toss the ball gently upward with your non-racket hand","Let it bounce once, then swing through to clear the net","Celebrate every ball that goes over — don't count misses yet"],tip:"Feed the ball at waist height. Too high = panic swing. Too low = topped shot."},
+    {name:"Drop & Catch Rally",steps:["Parent drops ball from hip height directly in front of child","Child hits and parent catches — no net needed yet","Focus: swing path goes low-to-high, finishing above the shoulder","Do 5 in a row, rest, repeat"],tip:"Your job is to give a consistent drop. Same height, same spot, every time. Inconsistent feeds are the #1 frustration trigger."}]},
+  r1b:{title:"Tracking the Ball",drills:[{name:"Catch Before Hit",steps:["Before any hitting session, do 5 minutes of just catching","Parent tosses underhand, child catches with both hands","Call out 'bounce!' the moment the ball hits the ground","This trains eyes to track all the way to contact"],tip:"If she's mishitting, it's almost always an eye-tracking issue, not a swing issue."},
+    {name:"Color Call Drill",steps:["Write letters (A, B, C) on old tennis balls with a marker","Toss to child — they must call out the letter before hitting","This forces their eyes to focus on the ball, not the target"],tip:"Don't rush this drill. Slow feeds, clear letters. You can use stickers instead of writing."}]},
+  r1c:{title:"Basic Grip",drills:[{name:"The Handshake Check",steps:["Before every session: hold racket out, ask child to 'shake hands with it'","Eastern forehand grip: V of thumb and index knuckle on the side bevel","Check before you start — don't correct mid-rally","10 seconds, every session. Build the habit"],tip:"Never grab their hand to reposition it during a rally. Stop, reset, check grip, then continue."},
+    {name:"Wall Tap Warm-Up",steps:["Stand close to a wall or fence","Tap ball gently against it with correct grip, keeping wrist firm","Count consecutive taps — beat yesterday's score","This builds muscle memory for the grip without any pressure"],tip:"Keep it playful. 'How many can you get today?' not 'Do it correctly.'"}]},
+  r1d:{title:"2–3 Shot Cooperative Rally",drills:[{name:"Count Together",steps:["Stand close — 6 to 8 feet apart","Both count out loud together: ONE, TWO, THREE...","Stop at 3 to start — success breeds success","Gradually move back as consistency improves"],tip:"Feed softly and directly to her racket. Your goal is to make her look good, not test her."},
+    {name:"Target Rally",steps:["Place a cone or water bottle on your side of the net","Try to rally and keep the ball near the target","Count the rally, not the misses","3 in a row = celebrate and reset"],tip:"If she misses, just say 'good try, let's go again.' Zero analysis mid-drill."}]},
+  r1e:{title:"Basic Footwork",drills:[{name:"Feet First",steps:["Before each feed, call out 'ready position!' — feet shoulder width, slight bend in knees","Feed the ball slightly to the right or left — not straight at her","Encourage her to take one step toward the ball before swinging","Praise the step, not just the hit"],tip:"Feed wide enough to require movement, but not so wide it's unreachable. You're creating footwork, not a sprint."},
+    {name:"Hopscotch Warm-Up",steps:["Set up 4–6 markers (cones, hats, bottles) in a line","Hop through them before picking up the racket","This warms up lateral movement and gets the brain engaged","Then move straight into the rally drill while feet are warm"],tip:"Kids who've warmed up their feet make fewer footwork errors. 3 minutes of movement warm-up changes everything."}]},
+  r1f:{title:"Underhand Serve Into Service Box",drills:[{name:"Step & Swing",steps:["Stand at the service line (not the baseline — too far to start)","Hold ball in front hand, racket in back hand","Step forward with front foot as you swing","Goal: ball clears net and lands in the opposite service box"],tip:"Stand closer than feels right. Success at close range builds the motion. Move back gradually."},
+    {name:"Target Spots",steps:["Place two cones in the service box as targets","Try to land the serve between them","Keep score: 5 attempts, how many land in?","If she gets 3 or more, move the cones closer together"],tip:"Don't comment on her form during this drill. Just count and celebrate successful serves."}]},
+  r1g:{title:"Court Boundaries (In/Out)",drills:[{name:"Line Walk",steps:["Before playing, walk the court boundary lines together","Ask: 'Is this spot in or out?' and point to different places","Walk the baseline, the sidelines, the service line","Make it a game — you get it wrong intentionally and let her correct you"],tip:"Children learn rules much faster when they get to be the expert. Let her teach you."},
+    {name:"In/Out Bounce",steps:["Stand at the baseline, bounce balls to different spots","Child calls 'in!' or 'out!' for each bounce","Gradually make it tricky — right on the line = in","Don't overcorrect. If she's unsure, say 'good question — on the line it's always in'"],tip:"Avoid long rule explanations. Quick, repetitive practice locks it in better than lectures."}]},
+  r1h:{title:"Enthusiasm & Staying Engaged",drills:[{name:"Choice Architecture",steps:["Give her two drill options before each session","'Do you want to do the counting rally or the target serve first?'","Children disengage when they feel no control — this restores it","End every session on a fun drill she loves, not the one she struggles with"],tip:"The most important skill at this stage is loving tennis. If she's not having fun, the session has failed — not her."},
+    {name:"Personal Best Tracking",steps:["Keep a small notepad or use the journal feature","'Last time we got 4 in a row — can we beat it today?'","Kids this age respond to personal bests better than competition","Celebrate the number, not the technique"],tip:"Never compare to other children. Personal bests only."}]},
+  r2a:{title:"Rally 5+ Times Consistently",drills:[{name:"The Magic Number",steps:["Pick a number together (start at 3, not 5)","Count out loud on every shot","When you reach the number, both cheer","Build to 5 over multiple sessions — not one session"],tip:"Your feed quality determines rally length more than her skill. Soft, medium-paced, waist-high feeds directly to her forehand side."},
+    {name:"Feed Consistency Check",steps:["Before the rally drill, practice your own feed for 2 minutes","Aim for same height, same pace, same spot every time","A child who misses 3 in a row will almost always get frustrated — that's usually a feed problem","If she's struggling, slow down your feed, not her swing"],tip:"The biggest cause of rally breakdown at this stage is parent feed inconsistency. Honest self-check: are your feeds the same every time?"}]},
+  r2b:{title:"Ready Position Between Shots",drills:[{name:"Freeze Game",steps:["After every shot, call out 'FREEZE!'","She must freeze in ready position: feet apart, knees bent, racket up","Give her a score out of 5 for her ready position","4+ = excellent, try to beat it next rally"],tip:"Don't freeze her mid-swing. Freeze her in the recovery moment after contact. That's when ready position matters."},
+    {name:"Shadow Footwork",steps:["No ball — just movement","You point left or right, she steps into ready position","5 left, 5 right, 5 forward, 5 back","Then pick up rackets and apply it to rally"],tip:"10 minutes of shadow footwork per week will do more for her ready position than 1 hour of correcting mid-rally."}]},
+  r2c:{title:"Forehand Swing Path & Follow-Through",drills:[{name:"The Fence Check",steps:["Stand her near a fence or wall (not touching)","Ask her to swing — if racket hits fence, she's wrapping around","Good follow-through ends over the shoulder, not around the body","No ball needed — just swing and check finish position"],tip:"'Finish over your shoulder' is the cue. Use it consistently. Don't use different words each time."},
+    {name:"Slow Motion Swings",steps:["Ask her to swing in slow motion — 5 seconds for the full swing","Watch: does the racket go low-to-high? Does it finish above the shoulder?","Speed comes later. Form first.","Then feed a ball and ask her to replicate the same feeling"],tip:"Slow motion reveals what fast swings hide. Do this at the start of each session."}]},
+  r2d:{title:"Backhand with Some Control",drills:[{name:"Two-Hand Wall Rally",steps:["Stand 3–4 feet from a wall or fence","Tap the ball against it on the backhand side, two hands on racket","Count consecutive taps — 5 is a great start","This builds muscle memory without the pressure of a rally"],tip:"Two-handed backhand is strongly recommended at this age. Don't push one-hander yet."},
+    {name:"Gentle Feed Backhand",steps:["Feed softly and directly to her backhand side (for a right-hander: your right, her left)","Start from 6 feet away — very close","She hits, you catch. No rally yet.","Focus: both hands on racket, swing through, finish high"],tip:"Feed directly to where the racket needs to be — don't make her move to the ball for this drill. Movement comes later."}]},
+  r2e:{title:"Direct Ball Cross-Court or Down the Line",drills:[{name:"Two-Target Game",steps:["Place one cone cross-court, one down the line","Call out which target before you feed: 'Cross!' or 'Line!'","She aims for the called target","Score: 5 tries for each direction"],tip:"Give the direction call early — before you feed, not as you feed. Children need time to process the target."},
+    {name:"Traffic Light",steps:["Red = stop, check grip and stance","Yellow = slow-motion swing toward target","Green = full speed swing","Do one red, one yellow, one green for each direction"],tip:"This drill teaches intentional direction — not just 'hit it somewhere'."}]},
+  r2f:{title:"Underhand Serve — Consistency & Placement",drills:[{name:"10-Serve Challenge",steps:["10 serves in a row from the service line","Count how many land in the box","Track the number each session — personal best system","When she hits 8/10 consistently, move one step back"],tip:"Placement before power. The goal is landing in the box, not serving hard."},
+    {name:"Corner to Corner",steps:["Place one cone in the far left of the service box, one in the far right","Serve 5 to each corner","Total: 10 serves, track how many land near a cone","This builds awareness that the serve can be directional"],tip:"Don't correct mechanics during this drill. Just count and celebrate direction."}]},
+  r2g:{title:"Play a Full 7-Game Set Format",drills:[{name:"Mini Match Practice",steps:["Set up a full 7-game set at home (or adjust to 4-game if attention is short)","You call score out loud before every point: '15-love', '30-15' etc.","Let her win some games — this isn't a competitive match, it's scoring literacy","After the set, ask her to tell you the final score"],tip:"If she gets frustrated with losing, switch to 'first to 4 games' as a stepping stone."},
+    {name:"Score Keeper Role",steps:["Give her the scorekeeping job for a practice set you play with someone else","She calls the score before each point","If she gets it wrong, gently correct — 'good try, it's actually 30-15'","This builds scoring confidence without performance pressure"],tip:"Children who track score for others learn it faster than those who only play."}]},
+  r2h:{title:"Sportsmanship & Court Etiquette",drills:[{name:"Role Play Scenarios",steps:["At home (not on court), act out situations: close calls, losing a point, missing an easy shot","Ask 'what would a good sport do here?'","Practice the physical response: take a breath, reset, play on","Praise the reset — not just the good behavior"],tip:"Don't address sportsmanship moments on court in front of others. Brief, private, immediate — then move on."},
+    {name:"The Handshake Habit",steps:["End every practice session — even at home — with a handshake and 'good game'","Make it a ritual, not a lesson","Before real matches: 'What do we always do at the end?' — she should know"],tip:"Rituals create muscle memory for behavior. The handshake should be automatic by the time she plays her first match."}]},
+  o1:{title:"Consistent Forehand with Follow-Through",drills:[{name:"20-Ball Forehand Feed",steps:["Feed 20 balls in a row to the forehand side","She hits, you catch or collect","After 20: count how many had a full follow-through (racket finishes above shoulder)","Target: 15 out of 20"],tip:"Feed at the same pace, same height, same location every time. Consistency in your feed creates consistency in her swing."},
+    {name:"Follow-Through Freeze",steps:["After every forehand, she freezes in finish position for 2 seconds","You call out: 'Good finish!' or 'A bit low — try again'","This builds body awareness of what the correct finish feels like"],tip:"Use the same phrase every time: 'Finish above the ear.' Consistency of cue = faster learning."}]},
+  o2:{title:"Developing Backhand (1 or 2-Handed)",drills:[{name:"Backhand Only Rally",steps:["Set a rule: only backhands allowed in this drill","Feed only to the backhand side","Count how many she gets over the net in a row","Target: 5 consecutive"],tip:"Two-hander or one-hander — commit to one for now. Switching between them mid-development delays both."},
+    {name:"Shadow + Feed",steps:["Shadow swing 3 times — she shows you the correct shape","Then you feed a ball and she replicates the shadow swing","Repeat: shadow, shadow, shadow, ball","This bridges the gap between knowing the motion and applying it"],tip:"If the shadow looks right but the ball swing looks wrong, her weight transfer is usually the issue — not the arm."}]},
+  o3:{title:"Serve Overhand with Toss and Motion",drills:[{name:"Toss Only",steps:["No racket — just work on the toss","Toss the ball straight up, slightly in front, at the same height every time","Target: ball should land on the same spot every time (mark it with chalk or a cone)","20 tosses per session until it's automatic"],tip:"90% of serving problems in junior tennis come from an inconsistent toss. Toss first, swing second."},
+    {name:"Trophy Position",steps:["Racket up, arm extended, ball at the top of the toss — freeze here","This is the 'trophy position' — hold it for 2 seconds","Then swing through from trophy to contact","Practice: toss, reach trophy, hold, then swing"],tip:"Use the word 'trophy' consistently. 'Show me your trophy!' is a faster cue than 'extend your arm and hold the racket up'."}]},
+  o4:{title:"5+ Shot Rally from Baseline",drills:[{name:"Feed-Rally Combo",steps:["Start with a controlled feed, then rally out the point","Count every shot — both parent and child's shots count","Target: 5 or more before the ball goes out or in the net","Record the best rally length each session"],tip:"Move back to the baseline yourself when feeding. Your position matters — if you're at the net feeding, she doesn't learn to rally from the baseline."},
+    {name:"Beat Your Best",steps:["Each session, the goal is to beat the previous session's longest rally","Keep the number written down (use the journal feature)","When she beats it, genuine celebration","If she doesn't beat it, 'we'll get it next time' and move on"],tip:"Personal best culture eliminates comparison pressure and creates intrinsic motivation."}]},
+  o5:{title:"Approach the Net with Confidence",drills:[{name:"Short Ball Attack",steps:["Feed a short ball (bounces near the service line)","She must recognize it as a short ball and move forward","Hit the approach shot, then come to the net","You lob back — she tries one volley"],tip:"Call out 'short ball!' as you feed it, at first. This trains pattern recognition. Fade the verbal cue over time."},
+    {name:"Net Sprint",steps:["Start at baseline in ready position","On your signal, she sprints to the service line and stops in ready position","Feed a ball — she hits a volley","The movement habit is more important than the volley quality at first"],tip:"Speed to the net is a confidence issue as much as a technique issue. Celebrate fast approaches."}]},
+  o6:{title:"Volley 2+ Times at Net",drills:[{name:"Catch and Punch",steps:["Stand 6 feet apart at the net","Toss underhand to her — she 'punches' it back (no swing, just push)","Count consecutive volleys","Target: 2 first, build to 5"],tip:"'No swing, just punch' is the key cue. Most junior volley errors come from big swings. Compact = clean."},
+    {name:"Mini Tennis",steps:["Both stand in the service boxes","Rally using volleys only — ball must stay between the two service lines","This creates pressure to control the volley, not just hit it hard","First to 10 points"],tip:"Mini tennis is one of the best all-around development drills at this stage. Use it as a warm-up every session."}]},
+  o7:{title:"Play with Strategic Intent",drills:[{name:"Target Ball",steps:["Place a cone in each corner of the court","Before each point, she picks which cone she's aiming for","After the point, ask 'did you hit your target?'","This develops conscious shot selection"],tip:"Don't evaluate whether the strategy was right or wrong. Just reinforce the habit of choosing a target."},
+    {name:"Pattern Play",steps:["Teach one simple pattern: cross-court forehand, then down the line","Feed to her forehand: she hits cross-court","Move to receive cross-court: she hits down the line","Repeat 10 times"],tip:"Patterns beat improvisation at this age. One pattern learned well is worth more than five patterns learned partially."}]},
+  g1:{title:"Reliable Forehand with Topspin",drills:[{name:"Brush Drill",steps:["Low-to-high swing path is the key to topspin","Ask her to imagine 'brushing the back of the ball upward'","Feed at medium pace — she focuses on swing path, not placement","Watch: does the ball land with a higher bounce? That's topspin working"],tip:"Topspin comes from the swing path, not wrist flick. If she's flicking her wrist, slow the swing down."},
+    {name:"Spin Comparison",steps:["Hit 5 balls flat, 5 balls with topspin","Count how many land in from each set","Topspin balls should land in more consistently because of the higher net clearance and extra dip","This teaches the practical value of topspin"],tip:"Don't over-explain the physics. Just show the result — more balls in."}]},
+  g2:{title:"Consistent Two-Handed or Slice Backhand",drills:[{name:"Backhand 20",steps:["20 backhand feeds, she hits, you collect","Count: in/out/net — track ratio","Target: 15/20 landing in","Do this at the start of every session to establish baseline"],tip:"Consistency before direction. Don't add targets until she's reliably clearing the net."},
+    {name:"Slice Shape",steps:["For slice: feed shoulder-high ball","She swings high-to-low with a continental grip","The ball should float and stay low after the bounce","Do 10 in a row, just working on the shape"],tip:"Slice is a weapon, not a weakness. Frame it as 'now you have two backhands'."}]},
+  g3:{title:"Serve with Full Toss, Pronation, and Motion",drills:[{name:"Pronation Shadow",steps:["Hold racket up at the trophy position","From trophy, swing through and pronate the wrist (turn it outward)","The racket face should end facing left (for right-handers) after contact","Do this in slow motion — 10 times — before serving"],tip:"Pronation is the last thing to develop. Don't force it. Build the motion, pronation comes with maturity and practice."},
+    {name:"Serve Targets",steps:["Place a cone in the T (center of the service box) and one wide","Serve 10 to the T, 10 wide, 10 at the body","Track results — which target is most consistent?","This builds tactical serving awareness"],tip:"Placement over power. A well-placed second serve is more valuable than a hard one in the net."}]},
+  g4:{title:"Understand and Apply Spin",drills:[{name:"Spin Museum",steps:["Hit three types of shots back to back: flat, topspin, slice","Point to which is which after each","Ask her to identify the spin from the bounce and flight","This builds 'spin literacy'"],tip:"Children who can read spin become much better competitors. This is a long-term investment."},
+    {name:"Spin Request Rally",steps:["Before each shot, you call out: 'topspin' or 'slice'","She must apply the requested spin","Start slow — medium pace, close to the baseline","Build speed once the shape is consistent"],tip:"Don't grade quality in this drill. Just reinforce the habit of intentional spin selection."}]},
+  g5:{title:"Move Efficiently Around Full Court",drills:[{name:"Corner to Corner",steps:["She starts at the center baseline mark","You feed alternating wide balls — left corner, right corner","She must recover to center between each ball","Count: how many in a row can she handle?"],tip:"Recovery to center is the habit. If she doesn't recover, pause the drill and restart. That habit is more important than hitting the wide ball."},
+    {name:"Pattern Movement",steps:["Feed a pattern: wide right, short center, wide left","She moves to each ball in sequence","After 3 balls, stop — she names where she is on the court","This builds spatial awareness and tactical positioning"],tip:"Narrating their position ('I'm at the right corner') builds court awareness faster than instruction alone."}]},
+  g6:{title:"Volley with Control and Direction",drills:[{name:"Directional Volley",steps:["Feed to her forehand volley side","She must alternate: one cross-court, one down the line","You catch each — no rally yet","Count: how many consecutive directed volleys?"],tip:"Compact punch motion for direction. Big swings = direction loss."},
+    {name:"Volley-Volley-Lob",steps:["Both at the net — exchange two volleys, then she lobs on the third","This simulates a real net exchange pattern","Count successful three-ball sequences","5 in a row = excellent"],tip:"The pattern creates game-realistic pressure. Volleys in drills often look different to volleys in points because of the added pressure of 'what's next'."}]},
+  g7:{title:"Match-Play Strategy and Shot Selection",drills:[{name:"Consequence Points",steps:["Play points where you must announce your strategy before the point starts","'I'm going to push her wide and approach'","After the point, review: did the strategy work? Why or why not?","This builds tactical thinking"],tip:"Don't correct strategy in the moment. Let the point play out. Debrief after."},
+    {name:"High Percentage Counting",steps:["Play a set — but count unforced errors separately from winners","Goal: reduce unforced errors each set","A player who doesn't make errors doesn't lose","This teaches that consistency IS strategy"],tip:"At junior level, consistent players beat aggressive players most of the time. Building this mindset early pays dividends."}]},
+};
+
+/* ── HOME DRILLS TAB ── */
+function HomeDrills({player,getStageProgress}){
+  const[selectedSkill,setSelectedSkill]=useState(null);
+  const[selectedStage,setSelectedStage]=useState(null);
+
+  // Find all incomplete skills across all stages
+  const incompleteByStage=STAGES.map(s=>{
+    const incomplete=s.skills.filter(sk=>!player.checked[sk.id]);
+    return{stage:s,skills:incomplete};
+  }).filter(x=>x.skills.length>0);
+
+  const allIncomplete=incompleteByStage.flatMap(x=>x.skills.map(sk=>({skill:sk,stage:x.stage})));
+  const currentStage=STAGES.find(s=>s.id===player.profile?.currentStage)||STAGES[0];
+  const focusSkills=currentStage.skills.filter(sk=>!player.checked[sk.id]);
+
+  const drill=selectedSkill?SKILL_DRILLS[selectedSkill.id]:null;
+  const skillStage=selectedSkill?STAGES.find(s=>s.skills.find(sk=>sk.id===selectedSkill.id)):null;
+
+  if(selectedSkill&&drill){
+    return(
+      <div style={{animation:"fadeIn 0.3s ease"}}>
+        <button onClick={()=>setSelectedSkill(null)} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:18,background:"rgba(255,255,255,0.07)",color:"#aaa",border:"none",cursor:"pointer",fontSize:12,marginBottom:14}}>← Back to drills</button>
+        <div style={{background:`${skillStage.color}18`,border:`1px solid ${skillStage.color}44`,borderRadius:16,padding:"16px 15px",marginBottom:13}}>
+          <div style={{fontSize:10,color:skillStage.color,textTransform:"uppercase",letterSpacing:1,fontWeight:600,marginBottom:5}}>{skillStage.emoji} {skillStage.label}</div>
+          <div style={{fontSize:17,fontWeight:"bold",marginBottom:3}}>{drill.title}</div>
+          <div style={{fontSize:11,color:"#8a9a8a"}}>2 parent-led drills · No coach needed</div>
+        </div>
+        {drill.drills.map((d,i)=>(
+          <div key={i} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"16px 15px",marginBottom:11}}>
+            <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:12}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:`${skillStage.color}22`,border:`2px solid ${skillStage.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:"bold",color:skillStage.color,flexShrink:0}}>{i+1}</div>
+              <div style={{fontSize:15,fontWeight:"bold"}}>{d.name}</div>
+            </div>
+            <div style={{display:"grid",gap:6,marginBottom:11}}>
+              {d.steps.map((step,j)=>(
+                <div key={j} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 10px",background:"rgba(255,255,255,0.04)",borderRadius:8}}>
+                  <div style={{width:18,height:18,borderRadius:"50%",background:skillStage.color,color:"#fff",fontSize:9,fontWeight:"bold",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>{j+1}</div>
+                  <span style={{fontSize:12,color:"#d0d8c8",lineHeight:1.55}}>{step}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{background:`${skillStage.color}14`,border:`1px solid ${skillStage.color}33`,borderLeft:`3px solid ${skillStage.color}`,borderRadius:9,padding:"9px 12px",display:"flex",gap:8,alignItems:"flex-start"}}>
+              <span style={{fontSize:14,flexShrink:0}}>💡</span>
+              <span style={{fontSize:11,color:"#b0c8a0",lineHeight:1.6,fontStyle:"italic"}}>{d.tip}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return(
+    <div style={{animation:"fadeIn 0.3s ease"}}>
+      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"13px 15px",marginBottom:14}}>
+        <div style={{fontSize:13,fontWeight:"bold",marginBottom:4}}>🎯 Home Drill Library</div>
+        <div style={{fontSize:11,color:"#8a9a8a",lineHeight:1.6}}>Step-by-step drills for every unchecked skill. Each drill is designed for a parent with no coaching background — just a racket, some balls, and 20 minutes.</div>
+      </div>
+
+      {/* Current stage focus — top of the list */}
+      {focusSkills.length>0&&(
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:11,color:currentStage.color,textTransform:"uppercase",letterSpacing:1,fontWeight:600,marginBottom:8}}>⚡ Current Stage Focus — {currentStage.label}</div>
+          <div style={{display:"grid",gap:7}}>
+            {focusSkills.map(sk=>(
+              <div key={sk.id} onClick={()=>setSelectedSkill(sk)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,cursor:"pointer",background:`${currentStage.color}12`,border:`1px solid ${currentStage.color}44`,transition:"all 0.2s"}}>
+                <div style={{width:36,height:36,borderRadius:"50%",background:`${currentStage.color}22`,border:`2px solid ${currentStage.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🎯</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,color:"#e0e8d8",marginBottom:2}}>{sk.text}</div>
+                  <div style={{fontSize:10,color:currentStage.color}}>{SKILL_DRILLS[sk.id]?`2 drills available`:"General practice tips"}</div>
+                </div>
+                <span style={{color:currentStage.color,fontSize:16}}>→</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* All other stages */}
+      {incompleteByStage.filter(x=>x.stage.id!==currentStage.id).map(({stage:s,skills})=>(
+        <div key={s.id} style={{marginBottom:14}}>
+          <div style={{fontSize:11,color:"#6a7a6a",textTransform:"uppercase",letterSpacing:1,fontWeight:600,marginBottom:7}}>{s.emoji} {s.label}</div>
+          <div style={{display:"grid",gap:6}}>
+            {skills.map(sk=>(
+              <div key={sk.id} onClick={()=>setSelectedSkill(sk)} style={{display:"flex",alignItems:"center",gap:11,padding:"10px 13px",borderRadius:11,cursor:"pointer",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",transition:"all 0.2s"}}>
+                <span style={{fontSize:14,flexShrink:0}}>○</span>
+                <span style={{flex:1,fontSize:12,color:"#b0b8a8"}}>{sk.text}</span>
+                <span style={{color:"#4a6a5a",fontSize:14}}>→</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {allIncomplete.length===0&&(
+        <div style={{textAlign:"center",padding:"32px 20px",color:"#5a7a5a"}}>
+          <div style={{fontSize:36,marginBottom:10}}>🏆</div>
+          <div style={{fontSize:15,fontWeight:"bold",marginBottom:5}}>All skills mastered!</div>
+          <div style={{fontSize:12}}>Nothing left to drill — your player is ready for the next level.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── COACH BRIEFING TAB ── */
+function CoachBriefing({player,getStageProgress,getCurrentBall}){
+  const[copied,setCopied]=useState(false);
+  const currentBall=getCurrentBall();
+  const name=player.profile?.name||"Player";
+  const coachName=player.profile?.coachName||"Coach";
+  const club=player.profile?.club||"";
+
+  // Build objective data
+  const allStages=STAGES.map(s=>{
+    const{pct,done,total}=getStageProgress(s.id);
+    const mastered=s.skills.filter(sk=>player.checked[sk.id]);
+    const notYet=s.skills.filter(sk=>!player.checked[sk.id]);
+    return{stage:s,pct,done,total,mastered,notYet};
+  });
+
+  const currentStageData=allStages.find(x=>x.stage.id===currentBall.id);
+  const recentJournal=(player.journal||[]).slice(0,5);
+  const sessionCount=(player.journal||[]).length;
+  const lastSession=recentJournal[0]?.date||"No sessions logged";
+
+  // Skills mastered with dates — only current stage
+  const masteredWithDates=currentStageData?.mastered.map(sk=>({
+    text:sk.text,date:player.masteredDates?.[sk.id]||"date unknown"
+  }))||[];
+
+  function buildBriefText(){
+    const lines=[];
+    lines.push(`PLAYER BRIEF — ${name}`);
+    lines.push(`Generated: ${todayStr()}`);
+    if(club)lines.push(`Program: ${club}`);
+    lines.push("");
+    lines.push(`CURRENT LEVEL: ${currentBall.label} (${currentBall.courtSize})`);
+    lines.push(`Overall progression: ${STAGES.flatMap(s=>s.skills).filter(sk=>player.checked[sk.id]).length} of ${STAGES.flatMap(s=>s.skills).length} total skills verified`);
+    lines.push(`Sessions logged: ${sessionCount} | Last session: ${lastSession}`);
+    lines.push("");
+    lines.push(`${currentBall.label.toUpperCase()} — CURRENT STAGE`);
+    lines.push(`Progress: ${currentStageData?.done||0} of ${currentStageData?.total||0} skills (${currentStageData?.pct||0}%)`);
+    lines.push("");
+    if(masteredWithDates.length>0){
+      lines.push("SKILLS CONFIRMED:");
+      masteredWithDates.forEach(s=>lines.push(`  ✓ ${s.text} (${s.date})`));
+      lines.push("");
+    }
+    if(currentStageData?.notYet.length>0){
+      lines.push("SKILLS NOT YET CONFIRMED:");
+      currentStageData.notYet.forEach(s=>lines.push(`  ○ ${s.text}`));
+      lines.push("");
+    }
+    if(recentJournal.length>0){
+      lines.push("RECENT PRACTICE LOG:");
+      recentJournal.forEach(e=>lines.push(`  [${e.date}] ${e.text}`));
+      lines.push("");
+    }
+    lines.push("— Generated by Junior Tennis Tracker");
+    return lines.join("\n");
+  }
+
+  function copyText(){
+    navigator.clipboard.writeText(buildBriefText()).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});
+  }
+
+  function printBrief(){
+    const txt=buildBriefText();
+    const w=window.open("","_blank");
+    w.document.write(`<!DOCTYPE html><html><head><title>Player Brief — ${name}</title><style>body{font-family:Georgia,serif;padding:40px;max-width:680px;margin:0 auto;color:#1a1a1a;line-height:1.7;}pre{white-space:pre-wrap;font-family:Georgia,serif;font-size:14px;}</style></head><body><pre>${txt}</pre></body></html>`);
+    w.document.close();setTimeout(()=>w.print(),300);
+  }
+
+  return(
+    <div style={{animation:"fadeIn 0.3s ease"}}>
+      {/* Header */}
+      <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"14px 15px",marginBottom:14}}>
+        <div style={{fontSize:13,fontWeight:"bold",marginBottom:4}}>📋 Coach Briefing Report</div>
+        <div style={{fontSize:11,color:"#8a9a8a",lineHeight:1.65}}>An objective, data-only summary of {name}'s current progress — designed to give {coachName} a complete picture in 30 seconds. No parent opinions. No requests. Just verified facts.</div>
+      </div>
+
+      {/* The brief card */}
+      <div style={{background:"#0a1a10",border:"1px solid #2D9C4A44",borderRadius:14,padding:"18px 16px",marginBottom:13,fontFamily:"Georgia,serif"}}>
+        {/* Header */}
+        <div style={{borderBottom:"1px solid rgba(255,255,255,0.1)",paddingBottom:12,marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+            <span style={{fontSize:26}}>{player.profile?.avatar||"🎾"}</span>
+            <div>
+              <div style={{fontSize:18,fontWeight:"bold"}}>{name}</div>
+              {coachName!=="Coach"&&<div style={{fontSize:11,color:"#6a9a7a"}}>For: {coachName}{club&&club!=="Other / Independent"?` · ${club}`:""}</div>}
+            </div>
+            <div style={{marginLeft:"auto",textAlign:"right"}}>
+              <div style={{fontSize:10,color:"#5a7a5a"}}>Generated</div>
+              <div style={{fontSize:11,color:"#8a9a8a"}}>{todayStr()}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:7,flexWrap:"wrap",marginTop:8}}>
+            <span style={{background:`${currentBall.color}22`,color:currentBall.color,padding:"3px 10px",borderRadius:10,fontSize:11,fontWeight:600}}>{currentBall.emoji} {currentBall.label}</span>
+            <span style={{background:"rgba(255,255,255,0.07)",color:"#c0c8c0",padding:"3px 10px",borderRadius:10,fontSize:11}}>{currentBall.courtSize}</span>
+            <span style={{background:"rgba(255,255,255,0.07)",color:"#c0c8c0",padding:"3px 10px",borderRadius:10,fontSize:11}}>{sessionCount} sessions logged</span>
+            {lastSession!=="No sessions logged"&&<span style={{background:"rgba(255,255,255,0.07)",color:"#c0c8c0",padding:"3px 10px",borderRadius:10,fontSize:11}}>Last: {lastSession}</span>}
+          </div>
+        </div>
+
+        {/* Current stage detail */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:10,color:currentBall.color,textTransform:"uppercase",letterSpacing:1,fontWeight:600,marginBottom:10}}>Current Stage — {currentBall.label}</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+            <div style={{flex:1,height:6,background:"rgba(255,255,255,0.08)",borderRadius:3}}><div style={{height:"100%",width:`${currentStageData?.pct||0}%`,background:currentBall.color,borderRadius:3}}/></div>
+            <span style={{fontSize:11,color:currentBall.color,fontWeight:600,flexShrink:0}}>{currentStageData?.done||0}/{currentStageData?.total||0}</span>
+          </div>
+
+          {masteredWithDates.length>0&&(
+            <div style={{marginBottom:11}}>
+              <div style={{fontSize:10,color:"#5a8a5a",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>✓ Confirmed Skills</div>
+              {masteredWithDates.map((s,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+                  <span style={{color:"#2D9C4A",fontSize:11,flexShrink:0}}>✓</span>
+                  <span style={{flex:1,fontSize:11,color:"#b0c8b0"}}>{s.text}</span>
+                  <span style={{fontSize:9,color:"#2D9C4A",fontStyle:"italic",flexShrink:0}}>{s.date}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {currentStageData?.notYet.length>0&&(
+            <div style={{marginBottom:11}}>
+              <div style={{fontSize:10,color:"#aa7a3a",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>○ Not Yet Confirmed</div>
+              {currentStageData.notYet.map((sk,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+                  <span style={{color:"#aa7a3a",fontSize:11,flexShrink:0}}>○</span>
+                  <span style={{flex:1,fontSize:11,color:"#a0a898"}}>{sk.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Previous stages summary */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:10,color:"#5a6a5a",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>All Stages — Snapshot</div>
+          {allStages.map(({stage:s,pct,done,total})=>(
+            <div key={s.id} style={{display:"flex",alignItems:"center",gap:9,marginBottom:6}}>
+              <span style={{fontSize:13,flexShrink:0}}>{s.emoji}</span>
+              <span style={{fontSize:11,color:"#8a9a8a",width:70,flexShrink:0}}>{s.short}</span>
+              <div style={{flex:1,height:4,background:"rgba(255,255,255,0.07)",borderRadius:2}}><div style={{height:"100%",width:`${pct}%`,background:s.color,borderRadius:2}}/></div>
+              <span style={{fontSize:10,color:pct===100?"#2D9C4A":"#6a7a6a",flexShrink:0}}>{done}/{total}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Recent practice log */}
+        {recentJournal.length>0&&(
+          <div>
+            <div style={{fontSize:10,color:"#5a6a5a",textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>Recent Practice Log</div>
+            {recentJournal.map((e,i)=>{
+              const es=STAGES.find(s=>s.id===e.stage)||STAGES[0];
+              return(
+                <div key={i} style={{padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+                  <div style={{display:"flex",gap:7,alignItems:"center",marginBottom:3}}>
+                    <span style={{fontSize:9,color:"#5a6a5a"}}>{e.date}</span>
+                    <span style={{fontSize:8,color:es.color,background:`${es.color}22`,padding:"1px 5px",borderRadius:6}}>{es.short}</span>
+                  </div>
+                  <div style={{fontSize:11,color:"#9aaa92",lineHeight:1.5}}>{e.text}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        <button onClick={copyText} style={{flex:1,padding:"11px",borderRadius:12,background:copied?"#2D9C4A":"rgba(255,255,255,0.08)",color:copied?"#fff":"#ccc",border:`1px solid ${copied?"#2D9C4A":"rgba(255,255,255,0.12)"}`,cursor:"pointer",fontSize:12,fontWeight:600,transition:"all 0.2s"}}>
+          {copied?"✓ Copied!":"📋 Copy as Text"}
+        </button>
+        <button onClick={printBrief} style={{flex:1,padding:"11px",borderRadius:12,background:"#2D9C4A",color:"#fff",border:"none",cursor:"pointer",fontSize:12,fontWeight:600}}>
+          🖨️ Print / PDF
+        </button>
+      </div>
+      <div style={{fontSize:10,color:"#4a5a4a",textAlign:"center",marginTop:10}}>Share before a lesson · No parent opinions included · Coach draws their own conclusions</div>
+    </div>
+  );
+}
+
+/* ── PRACTICE RESCUE TAB ── */
+function PracticeRescue(){
+  const[activeSection,setActiveSection]=useState("situations");
+  const[selectedCard,setSelectedCard]=useState(null);
+  const[resetStep,setResetStep]=useState(0);
+
+  const SITUATIONS=[
+    {id:"miss3",emoji:"😤",label:"3 Misses in a Row",color:"#E8382B",
+     summary:"The most common frustration trigger. Act before the 4th miss.",
+     immediate:"Say absolutely nothing about the miss. Feed the next ball slightly easier than usual — directly to her forehand, slower pace, more height. Make the next ball as easy to hit as possible. Let success reset the emotional state.",
+     avoid:"Avoid: 'It's okay', 'Keep trying', 'You almost had it'. All of these draw attention to the failure streak.",
+     cue:"Your cue: Stay relaxed in your own body language. Children read parent tension instantly. A calm face and a gentle next feed communicates more than any words.",
+     tip:"If she misses 5+ in a row on the same drill, the drill is too hard right now. Switch to something she's good at for 5 minutes. Come back to the hard drill after a win."},
+    {id:"feeds",emoji:"😠",label:"Frustrated with Your Feeds",color:"#C0271C",
+     summary:"She's telling you something real. The feed is probably inconsistent.",
+     immediate:"Stop. Take a genuine pause. Say: 'You're right, let me get a better feed for you.' Then consciously slow down and simplify your feed — same height, same pace, same spot.",
+     avoid:"Avoid defending your feed quality. Even if you think it was fine, her frustration is data. The more confident you feel about your feed, the more likely it's the problem.",
+     cue:"Self-check before every 5-ball set: Am I feeding to the same spot? Same height? Same pace? One variable change is all it takes to break her rhythm.",
+     tip:"The ideal parent feed for Red/Orange ball: tossed underhand from 8–10 feet, waist height, moderate pace, directly to where her racket needs to be — not where she has to be."},
+    {id:"quitdrill",emoji:"🙅",label:"Wants to Quit the Drill",color:"#F5820D",
+     summary:"Usually a signal of frustration, boredom, or feeling overwhelmed.",
+     immediate:"Say: 'Okay. What do you want to do instead?' Let her choose. Then negotiate: 'Let's do your thing for 3 minutes, then we come back to this one for just 2 more tries.'",
+     avoid:"Don't say 'just 5 more.' 'Just 5 more' is a trust-eroder — children learn it means 15 more. Make your commitments specific and honor them.",
+     cue:"If she wants to quit early in a session, it's often about the drill. If she wants to quit late in a session, it's often about fatigue. These need different responses.",
+     tip:"Build 'drill autonomy' into the session design: give her one choice before you start. 'Do you want to start with rally or serve today?' Ownership reduces resistance."},
+    {id:"incall",emoji:"⚖️",label:"Arguing About In/Out Calls",color:"#F59E0B",
+     summary:"Often a displacement emotion — she may be frustrated about something else.",
+     immediate:"Give her the call. Immediately. 'You're right, your call.' Then move on without any further commentary. Don't litigate close calls in practice.",
+     avoid:"Avoid long explanations of line rules mid-session. Rules conversations belong before or after practice, not during a point where emotions are running high.",
+     cue:"If the in/out arguments happen repeatedly in a session, it's almost never about the actual calls. Ask yourself: is she frustrated about something else — missed shots, fatigue, feeling pressured?",
+     tip:"In practice, always give the call to the child. Competition rules can be practiced in a different context. For now, 'you get the call' builds confidence and reduces conflict."},
+    {id:"goodshot",emoji:"🎯",label:"Great Shot, Then Loses Focus",color:"#2D9C4A",
+     summary:"Very common at this age. Excitement disrupts the next point's focus.",
+     immediate:"Brief, low-key acknowledgment: 'Nice.' Then immediately get ready for the next ball. Don't extend the celebration — it prolongs the distraction state.",
+     avoid:"Avoid: 'WOW! Amazing! Did you see that?!' The bigger the reaction, the longer the focus loss. Save big reactions for the end of the session.",
+     cue:"Teach the reset ritual: after a great shot, she bounces on her toes twice, gets into ready position. This physical ritual interrupts the emotional spike and refocuses her.",
+     tip:"Children who learn to manage positive emotions perform better in matches than children who only manage frustration. Celebrate — then reset. Both matter."},
+    {id:"compare",emoji:"👀",label:"Comparing Herself to Others",color:"#8B5CF6",
+     summary:"A sign of healthy awareness but needs gentle redirection.",
+     immediate:"Acknowledge: 'Yeah, Sofia is really good.' Then redirect: 'What's your personal best for the counting rally? Let's try to beat that today.'",
+     avoid:"Avoid: 'You're just as good as Sofia', 'You'll be better than her soon.' Comparison responses feed the comparison mindset. Redirect to personal standards.",
+     cue:"Children who compare outward haven't yet developed an internal benchmark. Your job is to consistently offer a personal-best framework until it becomes her default.",
+     tip:"'Is that your best?' is a more powerful question than any reassurance about how she compares to others. Get her looking inward."},
+    {id:"racket",emoji:"😡",label:"Racket Thrown or Hit the Ground",color:"#EC4899",
+     summary:"A hard limit that requires a clear, calm response.",
+     immediate:"Stop play immediately. Calmly: 'We pause for 2 minutes when that happens.' Sit down. No anger in your voice. No lecture. Time is the consequence.",
+     avoid:"Avoid big emotional reactions — these often accidentally reward the behavior with drama and attention. Calm and consistent is more powerful than firm and loud.",
+     cue:"After the 2-minute pause: 'Ready to go again?' No recap of what happened. Fresh start. The pause was the consequence — don't add a sermon.",
+     tip:"If racket throwing happens more than once per session, the sessions may be too long, too hard, or too pressured. Review the session structure before the next one."},
+    {id:"fatigue",emoji:"😴",label:"Losing Energy or Focus",color:"#0EA5E9",
+     summary:"Physical or mental fatigue. Both are real. Neither is fixed by pushing through.",
+     immediate:"Switch to a fun, easy game — mini tennis, bounce counting, anything low-stakes. Give the nervous system a recovery period. Then decide whether to continue or wrap up.",
+     avoid:"Avoid: 'We just started', 'You were doing so well.' Fatigue isn't a choice. Pushing through fatigue teaches children that their signals don't matter.",
+     cue:"Watch for: unfocused eyes, slumped posture, short answers, missing easy balls she usually gets. These are fatigue signals, not attitude signals.",
+     tip:"For Red/Orange ball players: 45 minutes is usually the maximum effective practice window. Beyond that, performance declines and frustration rises. Quality over length."},
+  ];
+
+  const FEED_GUIDE=[
+    {stage:"Red Ball 1 & 2",color:"#E8382B",distance:"6–10 feet",height:"Waist to chest height",pace:"Very slow — underhand toss",placement:"Directly to racket position",spin:"No spin",tip:"At this stage, your feed IS the drill. A bad feed makes a good swing impossible. Take it seriously."},
+    {stage:"Orange Ball",color:"#F5820D",distance:"10–15 feet",height:"Hip to waist height",pace:"Moderate — controlled toss or hand feed",placement:"To the hitting zone, slight adjustment required",spin:"Minimal — flat or slight topspin",tip:"Start adding a tiny bit of natural movement — don't feed right at her every time. Small adjustments build footwork."},
+    {stage:"Green Ball",color:"#2D9C4A",distance:"Baseline to baseline",height:"Variable — mix in low, medium, high",pace:"Rally pace — actual hitting",placement:"With intent — feed to locations that create patterns",spin:"Mix flat, topspin, and slice",tip:"At this stage, your feed should simulate real ball situations. Think like a feeder, not just a parent."},
+  ];
+
+  const RESET_PROTOCOL=[
+    {step:1,icon:"🛑",label:"Stop & Breathe",instruction:"Stop play. Don't say anything for 5 full seconds. Take a visible breath yourself — this models the behavior you want from her.",parent:"Your silence is the signal. Rushing to fill the silence makes it worse.",color:"#E8382B"},
+    {step:2,icon:"🚶",label:"Change Location",instruction:"Walk to a different spot on the court together. Even 10 steps changes the mental state. Sit on the bench if there is one.",parent:"Physical movement interrupts emotional loops. Don't skip this step.",color:"#F5820D"},
+    {step:3,icon:"💧",label:"Water & Reset",instruction:"Get water. Both of you. This creates a natural 60-90 second pause without any awkwardness.",parent:"Don't use this moment to talk about what went wrong. The water break IS the reset. Nothing more.",color:"#2D9C4A"},
+    {step:4,icon:"🎯",label:"Offer a Choice",instruction:"'Want to try the serve drill or the rally? Your choice.' Give her control. Control restores agency and reduces frustration.",parent:"Whatever she picks — go with it. No 'are you sure?' or steering toward what you think she should do.",color:"#0EA5E9"},
+    {step:5,icon:"▶️",label:"Start Fresh",instruction:"Begin the new drill with zero reference to what just happened. Fresh start means fresh start — no 'let's do better this time.'",parent:"If you've done this right, the frustration should be significantly reduced. If it's not, the session may simply be over for today — and that's okay.",color:"#8B5CF6"},
+  ];
+
+  const card=selectedCard?SITUATIONS.find(s=>s.id===selectedCard):null;
+
+  return(
+    <div style={{animation:"fadeIn 0.3s ease"}}>
+      {/* Section tabs */}
+      <div style={{display:"flex",gap:5,marginBottom:14}}>
+        {[{id:"situations",label:"🚨 Situations",},{id:"feeds",label:"🎾 Feed Guide"},{id:"reset",label:"🔄 Reset Protocol"}].map(s=>(
+          <button key={s.id} onClick={()=>{setActiveSection(s.id);setSelectedCard(null);}} style={{flex:1,padding:"9px 5px",borderRadius:10,border:"none",cursor:"pointer",background:activeSection===s.id?"#E8382B":"rgba(255,255,255,0.06)",color:activeSection===s.id?"#fff":"#888",fontFamily:"inherit",fontSize:11,fontWeight:activeSection===s.id?700:400,transition:"all 0.2s"}}>{s.label}</button>
+        ))}
+      </div>
+
+      {/* SITUATIONS */}
+      {activeSection==="situations"&&!card&&(
+        <div>
+          <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"12px 14px",marginBottom:13}}>
+            <div style={{fontSize:12,color:"#8a9a8a",lineHeight:1.6}}>Tap a situation below for an immediate, actionable response. Designed for real-time use — on the court, in the moment.</div>
+          </div>
+          <div style={{display:"grid",gap:7}}>
+            {SITUATIONS.map(s=>(
+              <div key={s.id} onClick={()=>setSelectedCard(s.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,cursor:"pointer",background:`${s.color}12`,border:`1px solid ${s.color}33`,transition:"all 0.2s"}}>
+                <span style={{fontSize:22,flexShrink:0}}>{s.emoji}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:"bold",color:"#e0e8d8",marginBottom:2}}>{s.label}</div>
+                  <div style={{fontSize:11,color:"#8a9a8a"}}>{s.summary}</div>
+                </div>
+                <span style={{color:s.color,fontSize:16,flexShrink:0}}>→</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SITUATION DETAIL */}
+      {activeSection==="situations"&&card&&(
+        <div style={{animation:"fadeIn 0.2s ease"}}>
+          <button onClick={()=>setSelectedCard(null)} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 13px",borderRadius:18,background:"rgba(255,255,255,0.07)",color:"#aaa",border:"none",cursor:"pointer",fontSize:12,marginBottom:14}}>← Back</button>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 15px",borderRadius:14,background:`${card.color}18`,border:`2px solid ${card.color}44`,marginBottom:13}}>
+            <span style={{fontSize:32}}>{card.emoji}</span>
+            <div><div style={{fontSize:17,fontWeight:"bold"}}>{card.label}</div><div style={{fontSize:11,color:"#8a9a8a",marginTop:2}}>{card.summary}</div></div>
+          </div>
+          {[
+            {label:"⚡ Do this immediately",content:card.immediate,color:"#2D9C4A"},
+            {label:"🚫 Avoid this",content:card.avoid,color:"#E8382B"},
+            {label:"🔍 Read the signals",content:card.cue,color:"#F59E0B"},
+            {label:"💡 Bigger picture",content:card.tip,color:"#8B5CF6"},
+          ].map((section,i)=>(
+            <div key={i} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${section.color}33`,borderLeft:`3px solid ${section.color}`,borderRadius:11,padding:"12px 14px",marginBottom:9}}>
+              <div style={{fontSize:10,color:section.color,fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>{section.label}</div>
+              <div style={{fontSize:13,color:"#c8d0c0",lineHeight:1.7}}>{section.content}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* FEED GUIDE */}
+      {activeSection==="feeds"&&(
+        <div>
+          <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"12px 14px",marginBottom:13}}>
+            <div style={{fontSize:13,fontWeight:"bold",marginBottom:4}}>🎾 The Parent Feed Guide</div>
+            <div style={{fontSize:11,color:"#8a9a8a",lineHeight:1.65}}>Inconsistent feeds are the #1 hidden cause of child frustration in parent-led practice. This guide gives you the right feed for each stage — so your child's skill, not your feed, is the variable.</div>
+          </div>
+          {FEED_GUIDE.map((f,i)=>(
+            <div key={i} style={{background:`${f.color}10`,border:`1px solid ${f.color}44`,borderRadius:14,padding:"16px 15px",marginBottom:11}}>
+              <div style={{fontSize:13,fontWeight:"bold",color:f.color,marginBottom:12}}>{f.stage}</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:11}}>
+                {[["📏 Distance",f.distance],["↕️ Height",f.height],["⚡ Pace",f.pace],["🎯 Placement",f.placement],["🌀 Spin",f.spin]].map(([label,val])=>(
+                  <div key={label} style={{background:"rgba(255,255,255,0.04)",borderRadius:8,padding:"8px 10px"}}>
+                    <div style={{fontSize:9,color:"#6a7a6a",textTransform:"uppercase",letterSpacing:1,marginBottom:3}}>{label}</div>
+                    <div style={{fontSize:12,color:"#d0d8c8"}}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{background:`${f.color}18`,border:`1px solid ${f.color}33`,borderRadius:9,padding:"9px 12px",display:"flex",gap:7,alignItems:"flex-start"}}>
+                <span style={{fontSize:13,flexShrink:0}}>💡</span>
+                <span style={{fontSize:11,color:"#b0c8a0",lineHeight:1.6,fontStyle:"italic"}}>{f.tip}</span>
+              </div>
+            </div>
+          ))}
+          {/* Common mistakes */}
+          <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"15px"}}>
+            <div style={{fontSize:13,fontWeight:"bold",marginBottom:11}}>⚠️ The 5 Most Common Feed Mistakes</div>
+            {[
+              {n:1,mistake:"Feeding too hard",fix:"Slow it down by 40%. You'll be surprised how much better she hits."},
+              {n:2,mistake:"Feeding too high",fix:"Waist height is ideal. Chest-high feeds cause reaching and mis-timing."},
+              {n:3,mistake:"Feeding to the same spot every time (no movement)",fix:"Add 1–2 feet of variation to build footwork. Not too much — just enough."},
+              {n:4,mistake:"Feeding while talking",fix:"Feed, then talk. Talking mid-feed causes the child to look at your face, not the ball."},
+              {n:5,mistake:"Inconsistent rhythm",fix:"Establish a rhythm: feed, wait for the hit, catch or collect, feed again. Same tempo every time."},
+            ].map(m=>(
+              <div key={m.n} style={{display:"flex",gap:11,padding:"9px 0",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
+                <div style={{width:22,height:22,borderRadius:"50%",background:"#E8382B22",border:"1px solid #E8382B55",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#E8382B",fontWeight:"bold",flexShrink:0}}>{m.n}</div>
+                <div><div style={{fontSize:12,fontWeight:"bold",color:"#e0e8d8",marginBottom:2}}>{m.mistake}</div><div style={{fontSize:11,color:"#8a9a8a",lineHeight:1.5}}>{m.fix}</div></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* RESET PROTOCOL */}
+      {activeSection==="reset"&&(
+        <div>
+          <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+            <div style={{fontSize:13,fontWeight:"bold",marginBottom:4}}>🔄 The 5-Step Session Reset</div>
+            <div style={{fontSize:11,color:"#8a9a8a",lineHeight:1.65}}>When a practice session is genuinely going off the rails — frustration escalating, energy collapsing — use this protocol. It works because it changes the physical state first, emotional state second.</div>
+          </div>
+          <div style={{display:"grid",gap:9,marginBottom:14}}>
+            {RESET_PROTOCOL.map((step,i)=>(
+              <div key={i} style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${step.color}33`,borderRadius:13,padding:"14px 14px",display:"flex",gap:13,alignItems:"flex-start"}}>
+                <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",background:`${step.color}22`,border:`2px solid ${step.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{step.icon}</div>
+                  <div style={{fontSize:9,color:step.color,fontWeight:700}}>STEP {step.step}</div>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:"bold",marginBottom:5,color:"#e0e8d8"}}>{step.label}</div>
+                  <div style={{fontSize:12,color:"#c8d0c0",lineHeight:1.65,marginBottom:8}}>{step.instruction}</div>
+                  <div style={{background:`${step.color}14`,border:`1px solid ${step.color}33`,borderRadius:8,padding:"7px 10px",fontSize:11,color:step.color,fontStyle:"italic"}}>👤 {step.parent}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,padding:"13px 14px"}}>
+            <div style={{fontSize:12,fontWeight:"bold",marginBottom:7}}>🧠 The Science Behind This</div>
+            <div style={{fontSize:11,color:"#8a9a8a",lineHeight:1.7}}>Frustration activates the amygdala — the brain's alarm system. Logical instruction doesn't work well when the amygdala is active. This protocol works by using physical movement and time to let the nervous system return to baseline. Once calm, learning resumes. Trying to coach through the frustration almost always makes it worse and longer.</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── MAIN APP ── */
+function App(){
+  const[appState,setAppState]=useState("loading");
+  const[players,setPlayers]=useState([]);
+  const[activePlayer,setActivePlayer]=useState(0);
+  const[activeTab,setActiveTab]=useState("home");
+  const[activeStage,setActiveStage]=useState("red1");
+  const[activeLearnModule,setActiveLearnModule]=useState("grips");
+  const[journalInput,setJournalInput]=useState("");
+  const[journalMood,setJournalMood]=useState("🌟");
+  const[showProfileEdit,setShowProfileEdit]=useState(false);
+  const[confettiActive,setConfettiActive]=useState(false);
+  const[toastAchievement,setToastAchievement]=useState(null);
+  const[recentStarSkill,setRecentStarSkill]=useState(null);
+  const[migrationState,setMigrationState]=useState(null); // null | "available" | "done" | "none"
+  const[migrationPreview,setMigrationPreview]=useState(null);
+
+  useEffect(()=>{
+    const saved=loadData();
+    if(saved&&Array.isArray(saved.players)&&saved.players.length>0){
+      setPlayers(saved.players);setActivePlayer(saved.activePlayer||0);setAppState("app");
+      // Check if old v5 data exists too
+      try{
+        const old=JSON.parse(localStorage.getItem("jtt-v5")||"null");
+        if(old&&Array.isArray(old.players)&&old.players.length>0){
+          const totalJournal=old.players.reduce((a,p)=>a+(p.journal||[]).length,0);
+          const totalChecked=old.players.reduce((a,p)=>a+Object.values(p.checked||{}).filter(Boolean).length,0);
+          if(totalJournal>0||totalChecked>0){
+            setMigrationPreview({journal:totalJournal,skills:totalChecked,players:old.players.length});
+            setMigrationState("available");
+          }
+        }
+      }catch(e){}
+    } else {
+      // Fresh load — check if v5 exists, offer to import on onboarding complete
+      setAppState("onboarding");
+      try{
+        const old=JSON.parse(localStorage.getItem("jtt-v5")||"null");
+        if(old&&Array.isArray(old.players)&&old.players.length>0){
+          const totalJournal=old.players.reduce((a,p)=>a+(p.journal||[]).length,0);
+          const totalChecked=old.players.reduce((a,p)=>a+Object.values(p.checked||{}).filter(Boolean).length,0);
+          if(totalJournal>0||totalChecked>0){
+            setMigrationPreview({journal:totalJournal,skills:totalChecked,players:old.players.length});
+            setMigrationState("available");
+          }
+        }
+      }catch(e){}
+    }
+  },[]);
+
+  function runMigration(){
+    try{
+      const old=JSON.parse(localStorage.getItem("jtt-v5")||"null");
+      if(!old||!Array.isArray(old.players))return;
+      const migrated=old.players.map(p=>({
+        ...p,
+        id:p.id||Date.now(),
+        profile:p.profile||{},
+        checked:p.checked||{},
+        masteredDates:p.masteredDates||{},
+        journal:p.journal||[],
+        earnedAchievements:p.earnedAchievements||[],
+      }));
+      setPlayers(migrated);
+      setActivePlayer(old.activePlayer||0);
+      setActiveStage(migrated[0]?.profile?.currentStage||"red1");
+      setAppState("app");
+      setMigrationState("done");
+      setTimeout(()=>setMigrationState(null),4000);
+    }catch(e){alert("Migration failed: "+e.message);}
+  }
+
+  useEffect(()=>{
+    if(appState!=="app"||players.length===0)return;
+    saveData({players,activePlayer});
+  },[players,activePlayer,appState]);
+
+  const player=players[activePlayer]||{checked:{},masteredDates:{},journal:[],earnedAchievements:[],profile:{}};
+
+  function updatePlayer(fn){setPlayers(prev=>prev.map((p,i)=>i===activePlayer?fn(p):p));}
+
+  function checkAchievements(np){
+    const earned=np.earnedAchievements||[];const toUnlock=[];
+    const total=Object.values(np.checked).filter(Boolean).length;
+    const pct=sid=>{const s=STAGES.find(s=>s.id===sid);const d=s.skills.filter(sk=>np.checked[sk.id]).length;return Math.round((d/s.skills.length)*100);};
+    [{id:"first_skill",cond:total>=1},{id:"red1_half",cond:pct("red1")>=50},{id:"red1_done",cond:pct("red1")===100},{id:"red2_done",cond:pct("red2")===100},{id:"red3_done",cond:pct("red3")===100},{id:"orange_half",cond:pct("orange")>=50},{id:"orange_done",cond:pct("orange")===100},{id:"orange2_done",cond:pct("orange2")===100},{id:"orange3_done",cond:pct("orange3")===100},{id:"green_half",cond:pct("green")>=50},{id:"green_done",cond:pct("green")===100},{id:"journal_5",cond:(np.journal||[]).length>=5},{id:"journal_10",cond:(np.journal||[]).length>=10}]
+    .forEach(c=>{if(c.cond&&!earned.includes(c.id))toUnlock.push(c.id);});
+    if(toUnlock.length>0){const a=ACHIEVEMENTS.find(a=>a.id===toUnlock[0]);if(a){setToastAchievement(a);if(toUnlock[0].includes("done"))setConfettiActive(true);}return{...np,earnedAchievements:[...earned,...toUnlock]};}
+    return np;
+  }
+
+  function toggleSkill(skillId){
+    updatePlayer(p=>{
+      const nowChecked=!p.checked[skillId];const md={...p.masteredDates};
+      if(nowChecked){md[skillId]=todayStr();setRecentStarSkill(skillId);setTimeout(()=>setRecentStarSkill(null),700);}
+      else delete md[skillId];
+      return checkAchievements({...p,checked:{...p.checked,[skillId]:nowChecked},masteredDates:md});
+    });
+  }
+
+  function addJournal(){
+    if(!journalInput.trim())return;
+    const entry={id:Date.now(),date:todayStr(),text:journalInput.trim(),mood:journalMood,stage:activeStage};
+    updatePlayer(p=>checkAchievements({...p,journal:[entry,...(p.journal||[])]}));
+    setJournalInput("");
+  }
+
+  function getStageProgress(stageId){
+    const s=STAGES.find(s=>s.id===stageId);const done=s.skills.filter(sk=>player.checked[sk.id]).length;
+    return{pct:Math.round((done/s.skills.length)*100),done,total:s.skills.length};
+  }
+
+  function getCurrentBall(){
+    for(const s of [...STAGES].reverse()){if(getStageProgress(s.id).pct>=75)return s;}
+    return STAGES.find(s=>s.id===player.profile?.currentStage)||STAGES[0];
+  }
+
+  function handleNavigate(tab,stageId){if(stageId)setActiveStage(stageId);setActiveTab(tab);}
+
+  const currentBall=getCurrentBall();
+  const totalSkills=STAGES.flatMap(s=>s.skills).length;
+  const totalDone=STAGES.flatMap(s=>s.skills).filter(sk=>player.checked[sk.id]).length;
+  const overallPct=Math.round((totalDone/totalSkills)*100);
+  const stage=STAGES.find(s=>s.id===activeStage)||STAGES[0];
+  const{pct:stagePct,done:stageDone,total:stageTotal}=getStageProgress(activeStage);
+  const earned=player.earnedAchievements||[];
+
+  const TABS=[{id:"home",label:"Home",icon:"🏠"},{id:"skills",label:"Skills",icon:"✓"},{id:"coach",label:"Coach Brief",icon:"📋"},{id:"drills",label:"Home Drills",icon:"🎯"},{id:"rescue",label:"Practice Rescue",icon:"🆘"},{id:"trophies",label:"Trophies",icon:"🏆"},{id:"learn",label:"Learn",icon:"📚"},{id:"journal",label:"Journal",icon:"📓"},{id:"programs",label:"Programs",icon:"📍"},{id:"parenting",label:"Parenting",icon:"💛"}];
+
+  if(appState==="loading")return(<div style={{minHeight:"100vh",background:"#0a1628",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}><div style={{textAlign:"center"}}><div style={{fontSize:48,marginBottom:10}}>🎾</div><div>Loading…</div></div></div>);
+  if(appState==="onboarding")return(
+    <div>
+      {migrationState==="available"&&migrationPreview&&(
+        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:999,background:"linear-gradient(135deg,#1a3a2a,#0d2218)",borderBottom:"2px solid #2D9C4A",padding:"14px 16px"}}>
+          <div style={{maxWidth:480,margin:"0 auto"}}>
+            <div style={{fontSize:13,fontWeight:"bold",color:"#4ade80",marginBottom:5}}>📦 Previous data found!</div>
+            <div style={{fontSize:11,color:"#8ac8a0",marginBottom:10,lineHeight:1.6}}>
+              Your old app has <strong style={{color:"#fff"}}>{migrationPreview.journal} journal {migrationPreview.journal===1?"entry":"entries"}</strong> and <strong style={{color:"#fff"}}>{migrationPreview.skills} checked skills</strong>. Import everything into this version?
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={runMigration} style={{flex:1,padding:"10px",borderRadius:11,background:"#2D9C4A",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700}}>✅ Import Everything</button>
+              <button onClick={()=>setMigrationState("none")} style={{padding:"10px 14px",borderRadius:11,background:"rgba(255,255,255,0.07)",color:"#888",border:"1px solid rgba(255,255,255,0.1)",cursor:"pointer",fontFamily:"inherit",fontSize:12}}>Skip</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{marginTop:migrationState==="available"?140:0}}>
+        <Onboarding onComplete={profile=>{const np={id:Date.now(),profile,checked:{},masteredDates:{},journal:[],earnedAchievements:[]};setPlayers([np]);setActivePlayer(0);setActiveStage(profile.currentStage||"red1");setAppState("app");}}/>
+      </div>
+    </div>
+  );
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0a1628 0%,#0d2218 40%,#0a1628 100%)"}}>
+      <Confetti active={confettiActive} onDone={()=>setConfettiActive(false)}/>
+      {toastAchievement&&<Toast achievement={toastAchievement} onDone={()=>setToastAchievement(null)}/>}
+      {showProfileEdit&&<ProfileEditModal player={player} onClose={()=>setShowProfileEdit(false)} onSave={profile=>{updatePlayer(p=>({...p,profile:{...p.profile,...profile}}));setShowProfileEdit(false);}}/>}
+
+      {/* Migration banner */}
+      {migrationState==="available"&&migrationPreview&&(
+        <div style={{background:"linear-gradient(135deg,#1a3a2a,#0d2218)",borderBottom:"2px solid #2D9C4A",padding:"12px 16px"}}>
+          <div style={{maxWidth:800,margin:"0 auto",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{fontSize:12,fontWeight:"bold",color:"#4ade80",marginBottom:2}}>📦 Previous app data detected</div>
+              <div style={{fontSize:11,color:"#8ac8a0"}}>
+                Found <strong style={{color:"#fff"}}>{migrationPreview.journal} journal {migrationPreview.journal===1?"entry":"entries"}</strong> + <strong style={{color:"#fff"}}>{migrationPreview.skills} checked skills</strong> from your old version
+              </div>
+            </div>
+            <div style={{display:"flex",gap:7,flexShrink:0}}>
+              <button onClick={runMigration} style={{padding:"8px 14px",borderRadius:10,background:"#2D9C4A",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>✅ Import Now</button>
+              <button onClick={()=>setMigrationState("none")} style={{padding:"8px 10px",borderRadius:10,background:"rgba(255,255,255,0.07)",color:"#888",border:"1px solid rgba(255,255,255,0.1)",cursor:"pointer",fontFamily:"inherit",fontSize:11}}>✕</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {migrationState==="done"&&(
+        <div style={{background:"linear-gradient(135deg,#1a3a2a,#0d2218)",borderBottom:"2px solid #2D9C4A",padding:"10px 16px",textAlign:"center"}}>
+          <span style={{fontSize:13,color:"#4ade80",fontWeight:600}}>✅ Migration complete! All journal entries and skills imported.</span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{background:"rgba(255,255,255,0.03)",borderBottom:"1px solid rgba(255,255,255,0.07)",padding:"11px 14px"}}>
+        <div style={{maxWidth:800,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+          <div style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer"}} onClick={()=>setActiveTab("home")}>
+            <span style={{fontSize:24}}>🎾</span>
+            <div><div style={{fontSize:15,fontWeight:"bold"}}>Junior Tennis Tracker</div><div style={{fontSize:9,color:"#6a9a7a",letterSpacing:"1.2px",textTransform:"uppercase"}}>Red · Orange · Green</div></div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:7}}>
+            {players.map((p,i)=>(
+              <button key={p.id} onClick={()=>setActivePlayer(i)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 11px",borderRadius:18,border:"none",cursor:"pointer",background:i===activePlayer?"#2D9C4A":"rgba(255,255,255,0.08)",color:i===activePlayer?"#fff":"#aaa",fontFamily:"inherit",fontSize:11,fontWeight:i===activePlayer?700:400}}>
+                <span style={{fontSize:13}}>{p.profile?.avatar||"🎾"}</span>{p.profile?.name||"Player"}
+              </button>
+            ))}
+            <button onClick={()=>setShowProfileEdit(true)} style={{padding:"5px 9px",borderRadius:18,background:"rgba(255,255,255,0.06)",color:"#8a9a8a",border:"1px solid rgba(255,255,255,0.1)",cursor:"pointer",fontSize:10}}>✏️ Profile</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <div style={{background:"rgba(0,0,0,0.2)",borderBottom:"1px solid rgba(255,255,255,0.06)",overflowX:"auto"}}>
+        <div style={{maxWidth:800,margin:"0 auto",display:"flex",padding:"0 8px"}}>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{flexShrink:0,padding:"10px 11px",border:"none",borderBottom:`2px solid ${activeTab===t.id?"#2D9C4A":"transparent"}`,cursor:"pointer",background:"transparent",color:activeTab===t.id?"#fff":"#666",fontFamily:"inherit",fontSize:11,fontWeight:activeTab===t.id?600:400,transition:"all 0.2s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
+              {t.icon} {t.label}
+              {t.id==="trophies"&&earned.length>0&&<span style={{fontSize:9,background:"rgba(245,158,11,0.3)",color:"#F59E0B",borderRadius:5,padding:"1px 3px"}}>{earned.length}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{maxWidth:800,margin:"0 auto",padding:"14px 12px 60px"}}>
+
+        {activeTab==="home"&&<Dashboard player={player} onNavigate={handleNavigate} getStageProgress={getStageProgress} getCurrentBall={getCurrentBall}/>}
+
+        {activeTab==="skills"&&(
+          <div>
+            <div style={{display:"flex",gap:5,marginBottom:12}}>
+              {STAGES.map(s=>{const{pct}=getStageProgress(s.id);const isActive=s.id===activeStage;return(
+                <button key={s.id} onClick={()=>setActiveStage(s.id)} style={{flex:1,padding:"7px 3px",borderRadius:9,border:"none",cursor:"pointer",background:isActive?`linear-gradient(135deg,${s.color},${s.accent})`:"rgba(255,255,255,0.05)",color:isActive?"#fff":"#888",fontFamily:"inherit",fontSize:10,fontWeight:isActive?700:400,boxShadow:isActive?`0 2px 10px ${s.color}44`:"none",transition:"all 0.25s"}}>
+                  <div style={{fontSize:15,marginBottom:1}}>{s.emoji}</div><div>{s.short}</div><div style={{fontSize:8,opacity:0.85,marginTop:1}}>{pct}%</div>
+                </button>
+              );})}
+            </div>
+            <div style={{background:"rgba(255,255,255,0.03)",border:`1px solid ${stage.color}33`,borderRadius:13}}>
+              <div style={{background:`linear-gradient(135deg,${stage.color}18,transparent)`,borderBottom:`1px solid ${stage.color}22`,padding:"11px 14px",display:"flex",alignItems:"center",gap:11}}>
+                <div style={{position:"relative",width:44,height:44}}>
+                  <ProgressRing pct={stagePct} color={stage.color} size={44}/>
+                  <span style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",fontSize:15}}>{stage.emoji}</span>
+                </div>
+                <div style={{flex:1}}><div style={{fontSize:14,fontWeight:"bold"}}>{stage.label} · {stage.courtSize}</div><div style={{fontSize:10,color:"#8a9a8a"}}>{stage.ageRange}</div><div style={{fontSize:10,color:"#7a9a8a",marginTop:2,lineHeight:1.4}}>{stage.description}</div><a href="https://tenniscentersandpoint.com/classes-programs/juniors/" target="_blank" style={{display:"inline-block",marginTop:4,fontSize:9,color:"#2D9C4A",background:"rgba(45,156,74,0.12)",border:"1px solid rgba(45,156,74,0.25)",borderRadius:6,padding:"2px 7px",textDecoration:"none"}}>📍 Criteria: Tennis Center Sand Point ↗</a></div>
+                <div style={{background:stage.color,color:"#fff",borderRadius:11,padding:"2px 9px",fontSize:11,fontWeight:700}}>{stageDone}/{stageTotal}</div>
+              </div>
+              <div style={{padding:"10px 12px",display:"grid",gap:5}}>
+                {stage.skills.map(sk=>{
+                  const done=!!player.checked[sk.id];const dt=player.masteredDates?.[sk.id];const justDone=recentStarSkill===sk.id;
+                  return(
+                    <div key={sk.id} onClick={()=>toggleSkill(sk.id)} style={{position:"relative",display:"flex",alignItems:"center",gap:9,padding:"9px 11px",borderRadius:8,cursor:"pointer",background:done?`${stage.color}14`:"rgba(255,255,255,0.025)",border:`1px solid ${done?stage.color+"44":"rgba(255,255,255,0.06)"}`,transition:"all 0.2s",animation:justDone?"pulse 0.4s ease":"none"}}>
+                      <div style={{width:19,height:19,borderRadius:"50%",flexShrink:0,background:done?stage.color:"transparent",border:`2px solid ${done?stage.color:"rgba(255,255,255,0.2)"}`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:9,fontWeight:"bold",transition:"all 0.25s"}}>{done?"✓":""}</div>
+                      <span style={{flex:1,fontSize:12,color:done?"#e0ead0":"#b0b8a8"}}>{sk.text}</span>
+                      {done&&dt&&<span style={{fontSize:8,color:stage.color,whiteSpace:"nowrap",fontStyle:"italic"}}>{dt}</span>}
+                      {justDone&&<span style={{position:"absolute",top:-7,right:-7,fontSize:15,animation:"starPop 0.6s ease forwards",pointerEvents:"none"}}>⭐</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              {stagePct>=75&&STAGES.findIndex(s=>s.id===activeStage)<STAGES.length-1&&(
+                <div style={{margin:"0 12px 12px",padding:"9px 13px",borderRadius:9,background:`${STAGES[STAGES.findIndex(s=>s.id===activeStage)+1].color}18`,border:`1px solid ${STAGES[STAGES.findIndex(s=>s.id===activeStage)+1].color}44`,textAlign:"center"}}>
+                  <span style={{fontSize:12}}>🎉 Ready for </span>
+                  <span onClick={()=>setActiveStage(STAGES[STAGES.findIndex(s=>s.id===activeStage)+1].id)} style={{color:STAGES[STAGES.findIndex(s=>s.id===activeStage)+1].color,cursor:"pointer",textDecoration:"underline",fontSize:12,fontWeight:700}}>{STAGES[STAGES.findIndex(s=>s.id===activeStage)+1].label} →</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab==="coach"&&<CoachBriefing player={player} getStageProgress={getStageProgress} getCurrentBall={getCurrentBall}/>}
+        {activeTab==="drills"&&<HomeDrills player={player} getStageProgress={getStageProgress}/>}
+        {activeTab==="rescue"&&<PracticeRescue/>}
+
+        {activeTab==="trophies"&&<TrophyRoom earned={earned}/>}
+
+        {activeTab==="learn"&&(
+          <div>
+            <div style={{display:"flex",gap:5,marginBottom:12,overflowX:"auto",paddingBottom:2}}>
+              {LEARN_MODULES.map(m=><button key={m.id} onClick={()=>setActiveLearnModule(m.id)} style={{flexShrink:0,padding:"8px 12px",borderRadius:9,border:"none",cursor:"pointer",background:activeLearnModule===m.id?m.color:"rgba(255,255,255,0.06)",color:activeLearnModule===m.id?"#fff":"#aaa",fontFamily:"inherit",fontSize:11,fontWeight:activeLearnModule===m.id?700:400,display:"flex",alignItems:"center",gap:5}}><span>{m.icon}</span><span>{m.label}</span></button>)}
+            </div>
+            <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:13,padding:"16px 14px"}}>
+              {activeLearnModule==="grips"&&<GripModule/>}
+              {activeLearnModule==="shots"&&<ShotsModule/>}
+              {activeLearnModule==="court"&&<CourtModule/>}
+              {activeLearnModule==="legends"&&<LegendsModule/>}
+              {activeLearnModule==="rules"&&<RulesModule/>}
+            </div>
+          </div>
+        )}
+
+        {activeTab==="journal"&&(
+          <div>
+            <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:13,padding:"14px",marginBottom:11}}>
+              <div style={{fontSize:10,color:"#8a9a8a",marginBottom:7,fontWeight:600,textTransform:"uppercase",letterSpacing:1}}>📓 New Session Note</div>
+              <div style={{display:"flex",gap:6,marginBottom:7}}>
+                {["🌟","💪","😅","🤩","📈","🎯"].map(m=><button key={m} onClick={()=>setJournalMood(m)} style={{fontSize:17,background:journalMood===m?"rgba(255,255,255,0.15)":"transparent",border:journalMood===m?"1px solid rgba(255,255,255,0.3)":"1px solid transparent",borderRadius:7,padding:"3px 6px",cursor:"pointer"}}>{m}</button>)}
+              </div>
+              <textarea value={journalInput} onChange={e=>setJournalInput(e.target.value)} placeholder={`How did ${player.profile?.name||"your child"}'s session go?`} rows={3}
+                style={{width:"100%",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:7,color:"#f0ede6",fontFamily:"inherit",fontSize:12,padding:"7px 9px",resize:"vertical",outline:"none",boxSizing:"border-box"}}/>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
+                <span style={{fontSize:9,color:"#6a7a6a"}}>{todayStr()} · {stage.label}</span>
+                <button onClick={addJournal} style={{padding:"5px 13px",borderRadius:16,background:"#2D9C4A",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:600}}>Save Entry</button>
+              </div>
+            </div>
+            {(player.journal||[]).length===0
+              ?<div style={{textAlign:"center",color:"#5a6a5a",padding:"28px 20px",fontSize:12}}>No entries yet!</div>
+              :<div style={{display:"grid",gap:7}}>
+                {(player.journal||[]).map(entry=>{const es=STAGES.find(s=>s.id===entry.stage)||STAGES[0];return(
+                  <div key={entry.id} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${es.color}33`,borderLeft:`3px solid ${es.color}`,borderRadius:9,padding:"9px 12px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:14}}>{entry.mood}</span><span style={{fontSize:9,color:"#6a7a6a"}}>{entry.date}</span><span style={{fontSize:8,color:es.color,background:`${es.color}22`,padding:"2px 6px",borderRadius:8}}>{es.emoji} {es.short}</span></div>
+                      <button onClick={()=>updatePlayer(p=>({...p,journal:(p.journal||[]).filter(e=>e.id!==entry.id)}))} style={{background:"none",border:"none",cursor:"pointer",color:"#4a5a4a",fontSize:13,padding:2}}>×</button>
+                    </div>
+                    <div style={{fontSize:12,color:"#c8d0c0",lineHeight:1.55}}>{entry.text}</div>
+                  </div>
+                );})}
+              </div>
+            }
+          </div>
+        )}
+
+        {activeTab==="programs"&&(
+          <div style={{display:"grid",gap:9}}>
+            <div style={{fontSize:10,color:"#6a7a6a",textAlign:"center",marginBottom:2}}>Seattle-area junior tennis programs</div>
+            {PROGRAMS.map(prog=>(
+              <div key={prog.name} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${prog.color}33`,borderLeft:`3px solid ${prog.color}`,borderRadius:11,padding:"12px 14px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:6}}>
+                  <div style={{flex:1,minWidth:155}}>
+                    <div style={{fontSize:13,fontWeight:"bold",marginBottom:2}}>{prog.name}</div>
+                    <div style={{fontSize:9,color:prog.color,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>{prog.type}</div>
+                    <div style={{fontSize:10,color:"#8a9a8a",marginBottom:2}}>📍 {prog.address}</div>
+                    <div style={{fontSize:10,color:"#8a9a8a",marginBottom:3}}>📞 {prog.phone}</div>
+                    <div style={{fontSize:10,color:"#b0c0b0",lineHeight:1.5}}>{prog.notes}</div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+                    <div style={{fontSize:9,color:"#7a8a7a",background:"rgba(255,255,255,0.06)",padding:"2px 7px",borderRadius:8}}>{prog.levels}</div>
+                    <a href={prog.url} target="_blank" rel="noopener noreferrer" style={{padding:"4px 11px",borderRadius:15,background:prog.color,color:"#fff",textDecoration:"none",fontSize:10,fontWeight:600,fontFamily:"inherit"}}>Visit →</a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab==="parenting"&&(
+          <div style={{display:"grid",gap:9}}>
+            {PARENTING_TIPS.map((tip,i)=><ParentingTip key={i} tip={tip}/>)}
+            <div style={{fontSize:9,color:"#4a5a4a",textAlign:"center",padding:"5px 0"}}>Inspired by USTA parent development resources and junior coaching best practices.</div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+const root=ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+</script>
+</body>
+</html>
